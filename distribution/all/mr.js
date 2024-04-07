@@ -4,24 +4,6 @@ const { getID, getNID } = require("../util/id");
 const store = require("./store");
 const comm = require("./comm");
 
-function mapOnNodes(jobID, nodes, keys, mapper) {
-  const neighborNIDs = nodes.map((node) => getNID(node));
-  nodes.forEach((node, idx) => {
-    const assignedKeys = keys.filter((key) => key % nodes.length == idx);
-    local.comm.send(
-      [jobID, mapper, assignedKeys, global.nodeConfig, neighborNIDs],
-      {
-        node: node,
-        service: "mr",
-        method: "map",
-      },
-      (e, _) => {
-        if (e) throw e;
-      },
-    );
-  });
-}
-
 function mr(config) {
   const context = {};
   context.gid = config.gid || "all";
@@ -47,6 +29,31 @@ function mr(config) {
     };
     createRPC(toAsync(notify), (fnID = `mr-${jobID}`));
     return;
+  }
+
+  function mapOnNodes(jobID, nodes, keys, mapper) {
+    const neighborNIDs = nodes.map((node) => getNID(node));
+    nodes.forEach((node, idx) => {
+      const assignedKeys = keys.filter((key) => key % nodes.length == idx);
+      local.comm.send(
+        [
+          context.gid,
+          jobID,
+          mapper,
+          assignedKeys,
+          global.nodeConfig,
+          neighborNIDs,
+        ],
+        {
+          node: node,
+          service: "mr",
+          method: "map",
+        },
+        (e, _) => {
+          if (e) throw e;
+        },
+      );
+    });
   }
 
   return {

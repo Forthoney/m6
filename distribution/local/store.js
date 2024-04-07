@@ -29,7 +29,7 @@ function readDir(path, callback) {
 function readFile(path, callback) {
   fs.readFile(path, (err, file) => {
     err
-      ? callback(Error(`Key not found`))
+      ? callback(Error(`Key ${path} not found in store`))
       : callback(null, util.deserialize(file));
   });
 }

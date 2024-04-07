@@ -5,7 +5,7 @@ const id = require("../util/id");
 /*
  * Sends the result of the map operation to the corresponding node to reduce
  */
-function sendForGrouping(result, neighborNIDs, callback) {
+function sendForGrouping(jobID, result, neighborNIDs, callback) {
   const mapKey = Object.keys(result)[0];
   const destinationNID = id.consistentHash(
     id.getID(mapKey),
@@ -47,13 +47,22 @@ function notificationBarrier(jobID, supervisor, length, callback) {
 }
 
 const mr = {
-  map: (jobID, mapper, keys, supervisor, neighborNIDs, callback = () => {}) => {
+  map: (
+    gid,
+    jobID,
+    mapper,
+    keys,
+    supervisor,
+    neighborNIDs,
+    callback = () => {},
+  ) => {
     keys.forEach((key) => {
-      store.get(key, (e, val) => {
+      store.get({ gid: gid, key: key }, (e, val) => {
         if (e) return callback(e);
 
         try {
           sendForGrouping(
+            jobID,
             mapper(key, val),
             neighborNIDs,
             notificationBarrier(jobID, supervisor, keys.length, callback),

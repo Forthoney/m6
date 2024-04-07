@@ -196,7 +196,7 @@ function parseWrapper(item) {
     case "Date":
       return new Date(item.value);
     case "Error":
-      return new Error(item.value);
+      return Error(item.value);
     case "Reference":
       return referenceConstructor(JSON.parse(item.value));
     case "ObjectId":
