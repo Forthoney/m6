@@ -30,6 +30,7 @@ services.set("comm", require("./comm"));
 services.set("gossip", require("./gossip"));
 services.set("mem", require("./mem"));
 services.set("store", require("./store"));
+services.set("mr", require("./mr"));
 services.set("routes", routes);
 
 module.exports = routes;

@@ -49,6 +49,24 @@ const store = {
     }
   },
 
+  hasGID: (gid, callback) => {
+    fs.stat(path.join(storeDirpath, gid), (err, stats) => {
+      if (err) {
+        if (err.code === "ENOENT") {
+          callback(null, false);
+        } else {
+          callback(err);
+        }
+      } else {
+        if (stats.isDirectory()) {
+          callback(null, true);
+        } else {
+          callback(null, false);
+        }
+      }
+    });
+  },
+
   put: (val, key, callback = () => {}) => {
     resolveFilePath(key, val, (e, fullpath) => {
       if (e) return callback(e);

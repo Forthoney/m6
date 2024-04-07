@@ -36,6 +36,7 @@ function groups(config) {
         gossip: require("./gossip")(newConfig),
         mem: require("./mem")(newConfig),
         store: require("./store")(newConfig),
+        mr: require("./mr")(newConfig),
       };
       local.groups.put(newConfig, group, (e, newGroup) => {
         const err = {};

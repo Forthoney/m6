@@ -8,6 +8,7 @@ const gossip = (config) => {
   };
   const mySid = util.id.getSID(global.nodeConfig);
   let gossipCounter = 0;
+
   return {
     at: (interval, func, callback = () => {}) => {
       comm(config).send(
