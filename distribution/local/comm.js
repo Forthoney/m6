@@ -34,7 +34,8 @@ function send(message, remote, callback = (_e, _) => {}) {
       body += chunk;
     });
     res.on("end", () => {
-      callback(...serialization.deserialize(body));
+      const [err, content] = serialization.deserialize(body);
+      callback(err, content);
     });
   });
 

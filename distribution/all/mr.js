@@ -55,7 +55,7 @@ function mr(config) {
       const nodes = Object.values(group);
       setupNotifyEndpoint(jobID, nodes.length, setting.reduce, callback);
       comm(config).send(
-        [context.gid, global.nodeConfig, jobID, setting.mapper],
+        [context.gid, global.nodeConfig, jobID, setting.mapper, context.hash],
         {
           service: "mr",
           method: "map",

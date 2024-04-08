@@ -15,11 +15,11 @@ const storeDirpath = path.join(__dirname, "../../store");
 /**
  * @typedef {Object} GroupKey
  * @property {string} gid
- * @property {LocalKey} key
+ * @property {?LocalKey} key
  */
 
 /**
- * @param {?LocalKey | GroupKey} key
+ * @param {LocalKey | GroupKey} key
  * @param {any} val
  * @param {types.Callback} callback
  */

@@ -6,9 +6,15 @@ const types = require("../types");
 const groupMap = new Map();
 
 /**
+ * @callback groupCallback
+ * @param {?Error} error
+ * @param {types.Group} [group=undefined]
+ */
+
+/**
  * @param {(object|string)} config
  * @param {types.Group} group
- * @param {types.Callback} callback
+ * @param {groupCallback} callback
  */
 function put(config, group, callback = (_e, _) => {}) {
   if (typeof group !== "object") {
@@ -23,58 +29,59 @@ function put(config, group, callback = (_e, _) => {}) {
 
 /**
  * @param {string} name
- * @param {types.Callback} callback
+ * @param {groupCallback} callback
  */
 function get(name, callback = () => {}) {
-  if (groupMap.has(name)) {
-    callback(null, groupMap.get(name));
+  const group = groupMap.get(name);
+  if (group) {
+    callback(null, group);
   } else {
-    callback(Error(`Could not find group with name ${name}`), null);
+    callback(Error(`Could not find group with name ${name}`));
   }
 }
 
 /**
  * @param {string} name
- * @param {types.Callback} callback
+ * @param {groupCallback} callback
  */
 function del(name, callback = () => {}) {
-  if (groupMap.has(name)) {
-    const deleted = groupMap.get(name);
+  const deleted = groupMap.get(name);
+  if (deleted) {
     groupMap.delete(name);
     callback(null, deleted);
   } else {
-    callback(Error(`Could not find group with name ${name}`), null);
+    callback(Error(`Could not find group with name ${name}`));
   }
 }
 
 /**
  * @param {string} name
  * @param {types.NodeInfo} node
- * @param {types.Callback} callback
+ * @param {groupCallback} callback
  */
 function add(name, node, callback = () => {}) {
   const group = groupMap.get(name);
   if (group) {
     const sid = id.getSID(node);
     group[sid] = node;
-    callback(null, groupMap.get(name));
+    callback(null, group);
   } else {
-    callback(Error(`Could not find group with name ${name}`), null);
+    callback(Error(`Could not find group with name ${name}`));
   }
 }
 
 /**
  * @param {string} name
  * @param {id.ID} sid
- * @param {types.Callback} callback
+ * @param {groupCallback} callback
  */
 function rem(name, sid, callback = () => {}) {
   const group = groupMap.get(name);
   if (group && sid in group) {
     delete group[sid];
-    callback(null, groupMap.get(name));
+    callback(null, group);
   } else {
-    callback(Error(`Could not find appropriate node to remove`), null);
+    callback(Error(`Could not find appropriate node to remove`));
   }
 }
 

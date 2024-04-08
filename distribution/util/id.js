@@ -50,6 +50,13 @@ function idToNum(id) {
 }
 
 /**
+ * @callback HashFunc
+ * @param {ID} kid
+ * @param {ID[]} nids
+ * @returns {ID}
+ */
+
+/**
  * @param {ID} kid
  * @param {ID[]} nids
  * @returns {ID}

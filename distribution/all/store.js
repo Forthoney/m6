@@ -1,5 +1,6 @@
 // @ts-check
 
+const assert = require("node:assert");
 const id = require("../util/id");
 const local = require("../local/local");
 const comm = require("./comm");
@@ -9,21 +10,34 @@ const types = require("../types");
  * @param {object} config
  */
 function store(config) {
+  /**
+   * The setting for this store service
+   * @type {object} context
+   * @property {string} gid
+   * @property {id.HashFunc} hash
+   */
   const context = {
     gid: config.gid || "all",
     hash: config.hash || id.naiveHash,
   };
 
   /**
-   * @param {Object.<string, object>} group
-   * @param {any} key
+   * @param {types.Group} group
+   * @param {string} key
+   * @returns {types.NodeInfo}
    */
   function groupToDestinationNode(group, key) {
     const nidToNodeMap = new Map(
       Object.values(group).map((node) => [id.getNID(node), node]),
     );
-    const destinationNID = context.hash(id.getID(key), nidToNodeMap.keys());
-    return nidToNodeMap[destinationNID];
+    const destinationNID = context.hash(
+      id.getID(key),
+      Array.from(nidToNodeMap.keys()),
+    );
+
+    const result = nidToNodeMap.get(destinationNID);
+    assert(result);
+    return result;
   }
 
   /**
@@ -50,6 +64,7 @@ function store(config) {
       local.groups.get(context.gid, (e, group) => {
         if (e) return callback(e, {});
 
+        assert(group);
         const remote = {
           service: "store",
           method: "get",
@@ -69,6 +84,7 @@ function store(config) {
     local.groups.get(context.gid, (e, group) => {
       if (e) return callback(e, null);
 
+      assert(group);
       const remote = {
         service: "store",
         method: "put",
@@ -86,6 +102,7 @@ function store(config) {
     local.groups.get(context.gid, (e, group) => {
       if (e) return callback(e, null);
 
+      assert(group);
       const remote = {
         service: "store",
         method: "del",
