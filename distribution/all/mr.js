@@ -1,17 +1,26 @@
+// @ts-check
+
 const local = require("../local/local");
 const { toAsync, createRPC } = require("../util/wire");
-const { getID, getNID } = require("../util/id");
-const store = require("./store");
+const { getID } = require("../util/id");
 const comm = require("./comm");
+const types = require("../types");
 
+/**
+ * @param {object} config
+ */
 function mr(config) {
   const context = {};
   context.gid = config.gid || "all";
 
-  /*
+  /**
    * Setup an notification endpoint. When workers are done mapping, they will
    * ping this endpoint. Once all workers are finished, the endpoint will trigger
    * the reduce phase
+   * @param {string} jobID
+   * @param {number} numNotify
+   * @param {types.Reducer} reducer
+   * @param {types.Callback} callback
    */
   function setupNotifyEndpoint(jobID, numNotify, reducer, callback) {
     let completed = 0;
@@ -27,59 +36,38 @@ function mr(config) {
         );
       }
     };
-    createRPC(toAsync(notify), (fnID = `mr-${jobID}`));
+    createRPC(toAsync(notify), `mr-${jobID}`);
     return;
   }
 
-  function mapOnNodes(jobID, nodes, keys, mapper) {
-    const neighborNIDs = nodes.map((node) => getNID(node));
-    nodes.forEach((node, idx) => {
-      const assignedKeys = keys.filter((key) => key % nodes.length == idx);
-      local.comm.send(
-        [
-          context.gid,
-          jobID,
-          mapper,
-          assignedKeys,
-          global.nodeConfig,
-          neighborNIDs,
-        ],
+  /**
+   * @param {object} setting
+   * @param {types.Callback} callback
+   */
+  function exec(setting, callback = (_e, _) => {}) {
+    if (setting.map == null || setting.reduce == null) {
+      return callback(Error("Did not supply mapper or reducer"), null);
+    }
+    local.groups.get(context.gid, (e, group) => {
+      if (e) return callback(e, {});
+
+      const jobID = setting.id || getID(setting);
+      const nodes = Object.values(group);
+      setupNotifyEndpoint(jobID, nodes.length, setting.reduce, callback);
+      comm(config).send(
+        [context.gid, global.nodeConfig, jobID, setting.mapper],
         {
-          node: node,
           service: "mr",
           method: "map",
         },
         (e, _) => {
-          if (e) throw e;
+          if (Object.values(e).length !== 0) return callback(e, {});
         },
       );
     });
   }
 
-  return {
-    exec: (setting, callback = () => {}) => {
-      if (setting.map == null || setting.reduce == null) {
-        return callback(Error("Did not supply mapper or reducer"));
-      }
-
-      store(config).get(null, (e, keys) => {
-        if (Object.values(e).length !== 0) return callback(e, {});
-
-        local.groups.get(context.gid, (e, group) => {
-          if (e) return callback(e, {});
-
-          const jobID = setting.id || getID(setting);
-          const nodes = Object.values(group);
-          setupNotifyEndpoint(jobID, nodes.length, setting.reduce, callback);
-          try {
-            mapOnNodes(jobID, nodes, keys, setting.map);
-          } catch (e) {
-            callback(e);
-          }
-        });
-      });
-    },
-  };
+  return { exec };
 }
 
 module.exports = mr;

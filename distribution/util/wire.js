@@ -1,9 +1,14 @@
+// @ts-check
+
 const { getID } = require("./id");
 
 global.rpcLocal = new Map();
 
-/*
+/**
  * Adds func as endpoint and returns serialized rpc function that calls func
+ * @param {Function} fn
+ * @param {string} [fnID=getID(fn)]
+ * @returns {Function}
  */
 function createRPC(fn, fnID = getID(fn)) {
   // Write some code...
@@ -24,11 +29,12 @@ function createRPC(fn, fnID = getID(fn)) {
   return new Function("...args", stubString);
 }
 
-/*
-    The toAsync function converts a synchronous function that returns a value
-    to one that takes a callback as its last argument and returns the value
-    to the callback.
-*/
+/**
+ * The toAsync function converts a synchronous function that returns a value
+ * to one that takes a callback as its last argument and returns the value
+ * to the callback.
+ * @param {Function} func
+ */
 function toAsync(func) {
   return function (...args) {
     const callback = args.pop() || function () {};
