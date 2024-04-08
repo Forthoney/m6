@@ -53,7 +53,7 @@ function idToNum(id) {
  * @callback HashFunc
  * @param {ID} kid
  * @param {ID[]} nids
- * @returns {ID}
+ * @returns {!ID}
  */
 
 /**
@@ -84,7 +84,9 @@ function consistentHash(kid, nids) {
   const numNIDMap = new Map(nids.map((nid) => [idToNum(nid), nid]));
   const numNIDs = Array.from(numNIDMap.keys());
   numNIDs.sort((a, b) => a - b);
-  return numNIDMap[findDestinationNum(numNIDs, idToNum(kid))];
+  const result = numNIDMap.get(findDestinationNum(numNIDs, idToNum(kid)));
+  assert(result);
+  return result;
 }
 
 /**

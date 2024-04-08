@@ -1,8 +1,9 @@
 // @ts-check
 
+const assert = require("node:assert");
 const local = require("../local/local");
 const { toAsync, createRPC } = require("../util/wire");
-const { getID } = require("../util/id");
+const id = require("../util/id");
 const comm = require("./comm");
 const types = require("../types");
 
@@ -10,8 +11,9 @@ const types = require("../types");
  * @param {object} config
  */
 function mr(config) {
-  const context = {};
-  context.gid = config.gid || "all";
+  const context = {
+    gid: config.gid || "all",
+  };
 
   /**
    * Setup an notification endpoint. When workers are done mapping, they will
@@ -51,11 +53,12 @@ function mr(config) {
     local.groups.get(context.gid, (e, group) => {
       if (e) return callback(e, {});
 
-      const jobID = setting.id || getID(setting);
+      const jobID = setting.id || id.getID(setting);
+      assert(group);
       const nodes = Object.values(group);
       setupNotifyEndpoint(jobID, nodes.length, setting.reduce, callback);
       comm(config).send(
-        [context.gid, global.nodeConfig, jobID, setting.mapper, context.hash],
+        [context.gid, global.nodeConfig, jobID, setting.map],
         {
           service: "mr",
           method: "map",

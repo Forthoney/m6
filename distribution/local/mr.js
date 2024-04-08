@@ -22,7 +22,7 @@ function sendForGrouping(jobID, result, neighborNIDs, hash, callback) {
     Array.from(neighborNIDs.keys()),
   );
   const destinationNode = neighborNIDs.get(destinationNID);
-  assert(destinationNode !== undefined);
+  assert(destinationNode);
   comm.send(
     [result, { gid: jobID, key: null }],
     { node: destinationNode, service: "store", method: "put" },
@@ -70,18 +70,16 @@ function notificationBarrier(jobID, supervisor, numNotifs, callback) {
  * @param {id.ID} jobID
  * @param {types.NodeInfo} supervisor
  * @param {types.Mapper} mapper
- * @param {id.HashFunc} hash
  * @param {types.Callback} callback
  */
-function map(gid, supervisor, jobID, mapper, hash, callback = (_e, _) => {}) {
+function map(gid, supervisor, jobID, mapper, callback = (_e, _) => {}) {
   store.get({ gid: gid, key: null }, (e, keys) => {
     if (e) return callback(e);
 
     groups.get(gid, (e, neighbors) => {
       if (e) return callback(e);
 
-      /** @type {types.Group} */
-      assert(neighbors !== undefined);
+      assert(neighbors);
       const neighborNIDNodeMap = new Map(
         Object.values(neighbors).map((node) => [id.getNID(node), node]),
       );
@@ -90,14 +88,14 @@ function map(gid, supervisor, jobID, mapper, hash, callback = (_e, _) => {}) {
         store.get({ gid: gid, key: key }, (e, val) => {
           if (e) return callback(e);
 
+          sendForGrouping(
+            jobID,
+            mapper(key, val),
+            neighborNIDNodeMap,
+            id.consistentHash,
+            notificationBarrier(jobID, supervisor, keys.length, callback),
+          );
           try {
-            sendForGrouping(
-              jobID,
-              mapper(key, val),
-              neighborNIDNodeMap,
-              hash,
-              notificationBarrier(jobID, supervisor, keys.length, callback),
-            );
           } catch (e) {
             callback(e);
           }
