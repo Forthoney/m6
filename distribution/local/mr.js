@@ -7,6 +7,7 @@ const groups = require("./groups");
 const id = require("../util/id");
 const types = require("../types");
 const util = require("../util/util");
+const { randomInt } = require("node:crypto");
 
 /**
  * Sends the result of the map operation to the corresponding node to reduce
@@ -18,7 +19,7 @@ const util = require("../util/util");
  */
 function sendForGrouping(jobID, results, neighborNIDs, hash, callback) {
   const barrier = util.waitAll(results.length, callback);
-  results.forEach((res) => {
+  results.forEach((res, idx) => {
     const mapKey = Object.keys(res)[0];
     const destinationNID = hash(
       id.getID(mapKey),
@@ -26,8 +27,9 @@ function sendForGrouping(jobID, results, neighborNIDs, hash, callback) {
     );
     const destinationNode = neighborNIDs.get(destinationNID);
     assert(destinationNode);
+    const key = id.getID(res) + id.getSID(global.nodeConfig) + randomInt(1000);
     comm.send(
-      [res, { gid: jobID, key: null }],
+      [res, { gid: jobID, key }],
       { node: destinationNode, service: "store", method: "put" },
       barrier,
     );
@@ -66,7 +68,7 @@ function notificationBarrier(jobID, supervisor, numNotifs, callback) {
  * @param {types.Mapper} mapper
  * @param {types.Callback} callback
  */
-function map(gid, supervisor, jobID, mapper, callback = (_e, _) => {}) {
+function map(gid, supervisor, jobID, mapper, callback = () => {}) {
   store.hasGID(gid, (e, exists) => {
     if (e) return callback(e);
     if (!exists) {
@@ -102,6 +104,7 @@ function map(gid, supervisor, jobID, mapper, callback = (_e, _) => {}) {
             if (!(mapperRes instanceof Array)) {
               mapperRes = [mapperRes];
             }
+            console.log("MAPPERRESULT======================", mapperRes);
             sendForGrouping(
               jobID,
               mapperRes,

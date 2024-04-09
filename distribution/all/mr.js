@@ -74,7 +74,10 @@ function mr(config) {
           method: "map",
         },
         (e, _) => {
-          if (Object.values(e).length !== 0) return callback(e, {});
+          // if (Object.values(e).length !== 0) {
+          //   console.log("+++++++++++++++++++++++++++++++++++++++++", e);
+          //   return callback(e, {});
+          // }
         },
       );
     });
