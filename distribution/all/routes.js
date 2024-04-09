@@ -1,6 +1,6 @@
 // @ts-check
-const comm = require("./comm");
-const types = require("../types");
+const comm = require('./comm');
+const types = require('../types');
 
 /**
  * @param {object} config
@@ -13,13 +13,13 @@ function routes(config) {
    */
   function put(service, name, callback = () => {}) {
     comm(config).send(
-      [service, name],
-      { service: "routes", method: "put" },
-      callback,
+        [service, name],
+        {service: 'routes', method: 'put'},
+        callback,
     );
   }
 
-  return { put };
+  return {put};
 }
 
 module.exports = routes;

@@ -9,13 +9,13 @@ routes   A mapping from names to functions          get, put
 
 */
 
-const status = require("./status");
-const groups = require("./groups");
-const routes = require("./routes");
-const comm = require("./comm");
-const gossip = require("./gossip");
-const mem = require("./mem");
-const store = require("./store");
+const status = require('./status');
+const groups = require('./groups');
+const routes = require('./routes');
+const comm = require('./comm');
+const gossip = require('./gossip');
+const mem = require('./mem');
+const store = require('./store');
 
 module.exports = {
   status: status,

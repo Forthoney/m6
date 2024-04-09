@@ -1,6 +1,6 @@
 // @ts-check
 
-const { getID } = require("./id");
+const {getID} = require('./id');
 
 global.rpcLocal = new Map();
 
@@ -8,7 +8,7 @@ global.rpcLocal = new Map();
  * Adds func as endpoint and returns serialized rpc function that calls func
  * @param {Function} fn
  * @param {string} [fnID=getID(fn)]
- * @returns {Function}
+ * @return {Function}
  */
 function createRPC(fn, fnID = getID(fn)) {
   // Write some code...
@@ -26,7 +26,7 @@ function createRPC(fn, fnID = getID(fn)) {
   };
   distribution.local.comm.send(args, remote, callback);
   `;
-  return new Function("...args", stubString);
+  return new Function('...args', stubString);
 }
 
 /**
@@ -36,8 +36,8 @@ function createRPC(fn, fnID = getID(fn)) {
  * @param {Function} func
  */
 function toAsync(func) {
-  return function (...args) {
-    const callback = args.pop() || function () {};
+  return function(...args) {
+    const callback = args.pop() || function() {};
     try {
       const result = func(...args);
       callback(null, result);

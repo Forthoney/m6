@@ -14,7 +14,7 @@
   },
   "scripts": {
     "test": "jest --maxWorkers 1",
-    "lint": "eslint --ignore-path .gitignore ."
+    "lint": "eslint --fix --ignore-path .gitignore ."
   },
   "author": "",
   "license": "ISC",

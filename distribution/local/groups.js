@@ -1,6 +1,6 @@
 // @ts-check
-const id = require("../util/id");
-const types = require("../types");
+const id = require('../util/id');
+const types = require('../types');
 
 /** @type {Map.<string, types.Group>} */
 const groupMap = new Map();
@@ -17,11 +17,11 @@ const groupMap = new Map();
  * @param {groupCallback} callback
  */
 function put(config, group, callback = (_e, _) => {}) {
-  if (typeof group !== "object") {
-    return callback(Error("Invalid group structure"));
+  if (typeof group !== 'object') {
+    return callback(Error('Invalid group structure'));
   }
 
-  config = typeof config === "string" ? { gid: config } : config;
+  config = typeof config === 'string' ? {gid: config} : config;
   groupMap.set(config.gid, group);
 
   callback(null, group);
@@ -85,4 +85,4 @@ function rem(name, sid, callback = () => {}) {
   }
 }
 
-module.exports = { put, get, add, del, rem };
+module.exports = {put, get, add, del, rem};

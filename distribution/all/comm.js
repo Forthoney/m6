@@ -1,7 +1,7 @@
 // @ts-check
-const local = require("../local/local");
-const types = require("../types");
-const { getSID } = require("../util/id");
+const local = require('../local/local');
+const types = require('../types');
+const {getSID} = require('../util/id');
 
 /**
  * @typedef {Object} AllRemote
@@ -14,7 +14,7 @@ const { getSID } = require("../util/id");
  */
 function comm(config) {
   const context = {
-    gid: config.gid || "all",
+    gid: config.gid || 'all',
   };
   const mySid = getSID(global.nodeConfig);
 
@@ -37,7 +37,7 @@ function comm(config) {
       const entries = Object.entries(group);
 
       entries.forEach(([sid, node]) => {
-        Object.assign(remote, { node: node });
+        Object.assign(remote, {node: node});
         local.comm.send(message, remote, (e, v) => {
           if (e) {
             errors[sid] = e;
@@ -53,7 +53,7 @@ function comm(config) {
     });
   }
 
-  return { send };
+  return {send};
 }
 
 module.exports = comm;

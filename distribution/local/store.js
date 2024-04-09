@@ -1,15 +1,15 @@
 // @ts-check
 
-const fs = require("node:fs");
-const path = require("node:path");
-const util = require("../util/util");
-const types = require("../types");
+const fs = require('node:fs');
+const path = require('node:path');
+const util = require('../util/util');
+const types = require('../types');
 
 // Top level store directory path
 const storeDirpath = path.join(
-  __dirname,
-  "../../store",
-  global.nodeConfig.port.toString(),
+    __dirname,
+    '../../store',
+    global.nodeConfig.port.toString(),
 );
 
 /**
@@ -30,11 +30,11 @@ const storeDirpath = path.join(
 function resolveFilePath(key, val, callback) {
   if (key === null) {
     return callback(null, path.join(storeDirpath, util.id.getID(val)));
-  } else if (typeof key === "string") {
+  } else if (typeof key === 'string') {
     return callback(null, path.join(storeDirpath, key));
   } else {
     const groupPath = path.join(storeDirpath, key.gid);
-    fs.mkdir(groupPath, { recursive: true }, (err) => {
+    fs.mkdir(groupPath, {recursive: true}, (err) => {
       if (err) return callback(err);
 
       callback(null, path.join(groupPath, key.key || util.id.getID(val)));
@@ -50,7 +50,7 @@ function readDir(path, callback) {
   fs.readdir(path, (err, files) => {
     if (err) {
       const wrappedErr = Error(err.message);
-      wrappedErr["code"] = err.code;
+      wrappedErr['code'] = err.code;
       return callback(wrappedErr);
     } else {
       callback(null, files);
@@ -64,9 +64,9 @@ function readDir(path, callback) {
  */
 function readFile(path, callback) {
   fs.readFile(path, (err, file) => {
-    err
-      ? callback(Error(`Key ${path} not found in store`))
-      : callback(null, util.deserialize(file));
+    err ?
+      callback(Error(`Key ${path} not found in store`)) :
+      callback(null, util.deserialize(file));
   });
 }
 
@@ -77,13 +77,13 @@ function readFile(path, callback) {
 function get(key, callback = () => {}) {
   if (key === null) {
     return readDir(storeDirpath, callback);
-  } else if (typeof key === "string") {
+  } else if (typeof key === 'string') {
     return readFile(path.join(storeDirpath, key), callback);
   } else {
     if (key.key === null) {
       return readDir(path.join(storeDirpath, key.gid), (e, v) => {
         if (e) {
-          return e["code"] === "ENOENT" ? callback(null, []) : callback(e);
+          return e['code'] === 'ENOENT' ? callback(null, []) : callback(e);
         } else {
           return callback(null, v);
         }
@@ -139,7 +139,7 @@ function getAll(gid, callback = () => {}) {
 function hasGID(gid, callback) {
   fs.stat(path.join(storeDirpath, gid), (err, stats) => {
     if (err) {
-      if (err.code === "ENOENT") {
+      if (err.code === 'ENOENT') {
         callback(null, false);
       } else {
         callback(err);
@@ -175,11 +175,11 @@ function put(val, key, callback = () => {}) {
  */
 function del(key, callback = () => {}) {
   let fullKey;
-  if (typeof key === "string") {
+  if (typeof key === 'string') {
     fullKey = key;
   } else {
-    if (key["key"] == null) {
-      return callback(Error("store:del called with null/invalid key"));
+    if (key['key'] == null) {
+      return callback(Error('store:del called with null/invalid key'));
     } else {
       fullKey = path.join(key.gid, key.key);
     }
@@ -190,11 +190,11 @@ function del(key, callback = () => {}) {
     if (readErr) return callback(Error(readErr.message));
 
     fs.unlink(filepath, (unlinkErr) => {
-      unlinkErr
-        ? callback(Error(unlinkErr.message))
-        : callback(null, util.deserialize(file));
+      unlinkErr ?
+        callback(Error(unlinkErr.message)) :
+        callback(null, util.deserialize(file));
     });
   });
 }
 
-module.exports = { get, getAll, hasGID, put, del };
+module.exports = {get, getAll, hasGID, put, del};

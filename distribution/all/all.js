@@ -10,14 +10,14 @@ store     A persistent store                     get, put, del, reconf
 mr        A map-reduce implementation            exec
 */
 
-const comm = require("./comm");
-const groups = require("./groups");
-const routes = require("./routes");
-const status = require("./status");
-const gossip = require("./gossip");
-const mem = require("./mem");
-const store = require("./store");
-const mr = require("./mr");
+const comm = require('./comm');
+const groups = require('./groups');
+const routes = require('./routes');
+const status = require('./status');
+const gossip = require('./gossip');
+const mem = require('./mem');
+const store = require('./store');
+const mr = require('./mr');
 
 module.exports = {
   comm: comm,

@@ -1,4 +1,4 @@
-const id = require("../util/id");
+const id = require('../util/id');
 
 const topLevelMem = new Map();
 const groupMem = new Map();
@@ -35,7 +35,7 @@ function delFromGroupMem(groupMem, key, callback) {
 
 const mem = {
   get: (key, callback = () => {}) => {
-    if (key === null || typeof key == "string") {
+    if (key === null || typeof key == 'string') {
       getFromGroupMem(topLevelMem, key, callback);
     } else {
       if (!groupMem.has(key.gid)) {
@@ -46,7 +46,7 @@ const mem = {
   },
 
   put: (val, key, callback = () => {}) => {
-    if (key === null || typeof key === "string") {
+    if (key === null || typeof key === 'string') {
       putToGroupMem(topLevelMem, key, val, callback);
     } else {
       if (!groupMem.has(key.gid)) {
@@ -57,7 +57,7 @@ const mem = {
   },
 
   del: (key, callback = () => {}) => {
-    if (typeof key === "string") {
+    if (typeof key === 'string') {
       delFromGroupMem(topLevelMem, key, callback);
     } else {
       const thisGroupMem = groupMem.get(key.gid);

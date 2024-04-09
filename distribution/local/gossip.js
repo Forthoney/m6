@@ -1,6 +1,6 @@
-const util = require("../util/util");
-const groups = require("./groups");
-const comm = require("./comm");
+const util = require('../util/util');
+const groups = require('./groups');
+const comm = require('./comm');
 
 const seen = new Set();
 
@@ -32,7 +32,7 @@ const gossip = {
     }
 
     seen.add(metadata.gossipId);
-    comm.send(message, { node: global.nodeConfig, ...remote }, (e, v) => {
+    comm.send(message, {node: global.nodeConfig, ...remote}, (e, v) => {
       if (e) return callback(e, null);
 
       groups.get(metadata.gid, (e, group) => {
@@ -47,23 +47,23 @@ const gossip = {
         const selected = getRandomElements(nodes, Math.log(nodes.length));
         selected.forEach(([sid, node]) => {
           comm.send(
-            [metadata, message, remote],
-            { service: "gossip", method: "recv", node: node },
-            (e, v) => {
-              if (e != null) {
-                errors[sid] = e;
-              } else {
-                results[sid] = v;
-              }
-
-              if (++count === selected.length) {
-                if (Object.values(errors).length === 0) {
-                  callback(null, results);
+              [metadata, message, remote],
+              {service: 'gossip', method: 'recv', node: node},
+              (e, v) => {
+                if (e != null) {
+                  errors[sid] = e;
                 } else {
-                  callback(errors, results);
+                  results[sid] = v;
                 }
-              }
-            },
+
+                if (++count === selected.length) {
+                  if (Object.values(errors).length === 0) {
+                    callback(null, results);
+                  } else {
+                    callback(errors, results);
+                  }
+                }
+              },
           );
         });
       });

@@ -1,6 +1,6 @@
-const serialization = require("./serialization");
-const id = require("./id");
-const wire = require("./wire");
+const serialization = require('./serialization');
+const id = require('./id');
+const wire = require('./wire');
 
 function waitAll(n, callback) {
   let counter = 0;
