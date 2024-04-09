@@ -1,13 +1,13 @@
 // @ts-check
 
-const assert = require('node:assert');
-const store = require('./store');
-const comm = require('./comm');
-const groups = require('./groups');
-const id = require('../util/id');
-const types = require('../types');
-const util = require('../util/util');
-const {randomInt} = require('node:crypto');
+const assert = require("node:assert");
+const store = require("./store");
+const comm = require("./comm");
+const groups = require("./groups");
+const id = require("../util/id");
+const types = require("../types");
+const util = require("../util/util");
+const { randomInt } = require("node:crypto");
 
 /**
  * Sends the result of the map operation to the corresponding node to reduce
@@ -19,19 +19,19 @@ const {randomInt} = require('node:crypto');
  */
 function sendForGrouping(jobID, results, neighborNIDs, hash, callback) {
   const barrier = util.waitAll(results.length, callback);
-  results.forEach((res, idx) => {
+  results.forEach((res) => {
     const mapKey = Object.keys(res)[0];
     const destinationNID = hash(
-        id.getID(mapKey),
-        Array.from(neighborNIDs.keys()),
+      id.getID(mapKey),
+      Array.from(neighborNIDs.keys()),
     );
     const destinationNode = neighborNIDs.get(destinationNID);
     assert(destinationNode);
     const key = id.getID(res) + id.getSID(global.nodeConfig) + randomInt(1000);
     comm.send(
-        [res, {gid: jobID, key}],
-        {node: destinationNode, service: 'store', method: 'put'},
-        barrier,
+      [res, { gid: jobID, key }],
+      { node: destinationNode, service: "store", method: "put" },
+      barrier,
     );
   });
 }
@@ -48,7 +48,7 @@ function notificationBarrier(jobID, supervisor, numNotifs, callback) {
   const notifyRemote = {
     node: supervisor,
     service: `mr-${jobID}`,
-    method: 'call',
+    method: "call",
   };
   return util.waitAll(numNotifs, (e, _) => {
     if (e) return callback(e);
@@ -69,54 +69,41 @@ function notificationBarrier(jobID, supervisor, numNotifs, callback) {
  * @param {types.Callback} callback
  */
 function map(gid, supervisor, jobID, mapper, callback = () => {}) {
-  store.hasGID(gid, (e, exists) => {
+  store.get({ gid: gid, key: null }, (e, keys) => {
     if (e) return callback(e);
-    if (!exists) {
-      const notifyRemote = {
-        node: supervisor,
-        service: `mr-${jobID}`,
-        method: 'call',
-      };
-      return comm.send([], notifyRemote, callback);
-    }
-
-    store.get({gid: gid, key: null}, (e, keys) => {
+    groups.get(gid, (e, neighbors) => {
       if (e) return callback(e);
-      groups.get(gid, (e, neighbors) => {
-        if (e) return callback(e);
 
-        assert(neighbors);
-        const neighborNIDNodeMap = new Map(
-            Object.values(neighbors).map((node) => [id.getNID(node), node]),
-        );
+      assert(neighbors);
+      const neighborNIDNodeMap = new Map(
+        Object.values(neighbors).map((node) => [id.getNID(node), node]),
+      );
 
-        const notif = notificationBarrier(
+      const notif = notificationBarrier(
+        jobID,
+        supervisor,
+        keys.length,
+        callback,
+      );
+      keys.forEach((/** @type {store.LocalKey} */ key) => {
+        store.get({ gid: gid, key: key }, (e, val) => {
+          if (e) return callback(e);
+
+          let mapperRes = mapper(key, val);
+          if (!(mapperRes instanceof Array)) {
+            mapperRes = [mapperRes];
+          }
+          sendForGrouping(
             jobID,
-            supervisor,
-            keys.length,
-            callback,
-        );
-        keys.forEach((/** @type {store.LocalKey} */ key) => {
-          store.get({gid: gid, key: key}, (e, val) => {
-            if (e) return callback(e);
-
-            let mapperRes = mapper(key, val);
-            if (!(mapperRes instanceof Array)) {
-              mapperRes = [mapperRes];
-            }
-            console.log('MAPPERRESULT======================', mapperRes);
-            sendForGrouping(
-                jobID,
-                mapperRes,
-                neighborNIDNodeMap,
-                id.consistentHash,
-                notif,
-            );
-            try {
-            } catch (e) {
-              callback(e);
-            }
-          });
+            mapperRes,
+            neighborNIDNodeMap,
+            id.consistentHash,
+            notif,
+          );
+          try {
+          } catch (e) {
+            callback(e);
+          }
         });
       });
     });
@@ -129,37 +116,31 @@ function map(gid, supervisor, jobID, mapper, callback = () => {}) {
  * @param {types.Callback} callback
  */
 function reduce(jobID, reducer, callback = (_e, _) => {}) {
-  store.hasGID(jobID, (e, exists) => {
+  store.getAll(jobID, (e, mapResults) => {
     if (e) return callback(e);
-    // nothing was assigned to this node
-    if (!exists) return callback(null, {});
 
-    store.getAll(jobID, (e, mapResults) => {
-      if (e) return callback(e);
+    assert(mapResults);
+    const organizedMapResults = mapResults.reduce((accumulator, obj, _) => {
+      const key = Object.keys(obj)[0];
+      const val = obj[key];
 
-      assert(mapResults);
-      const organizedMapResults = mapResults.reduce((accumulator, obj, _) => {
-        const key = Object.keys(obj)[0];
-        const val = obj[key];
-
-        if (key in accumulator) {
-          accumulator[key].push(val);
-        } else {
-          accumulator[key] = [val];
-        }
-        return accumulator;
-      }, {});
-
-      try {
-        const reduceResult = Object.entries(organizedMapResults).map(
-            ([key, val]) => reducer(key, val),
-        );
-        return callback(null, reduceResult);
-      } catch (e) {
-        return callback(e);
+      if (key in accumulator) {
+        accumulator[key].push(val);
+      } else {
+        accumulator[key] = [val];
       }
-    });
+      return accumulator;
+    }, {});
+
+    try {
+      const reduceResult = Object.entries(organizedMapResults).map(
+        ([key, val]) => reducer(key, val),
+      );
+      return callback(null, reduceResult);
+    } catch (e) {
+      return callback(e);
+    }
   });
 }
 
-module.exports = {map, reduce};
+module.exports = { map, reduce };
