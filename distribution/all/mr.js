@@ -31,10 +31,16 @@ function mr(config) {
         comm(config).send(
           [jobID, reducer],
           {
-            service: "map",
+            service: "mr",
             method: "reduce",
           },
-          callback,
+          (e, results) => {
+            if (Object.values(e).length !== 0) {
+              return callback(e);
+            }
+
+            return callback(e, Object.values(results));
+          },
         );
       }
     };

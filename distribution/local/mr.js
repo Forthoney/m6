@@ -6,28 +6,32 @@ const comm = require("./comm");
 const groups = require("./groups");
 const id = require("../util/id");
 const types = require("../types");
+const util = require("../util/util");
 
 /**
  * Sends the result of the map operation to the corresponding node to reduce
  * @param {id.ID} jobID
- * @param {any} result
+ * @param {Array} results
  * @param {Map.<string, types.NodeInfo>} neighborNIDs
  * @param {id.HashFunc} hash
  * @param {types.Callback} callback
  */
-function sendForGrouping(jobID, result, neighborNIDs, hash, callback) {
-  const mapKey = Object.keys(result)[0];
-  const destinationNID = hash(
-    id.getID(mapKey),
-    Array.from(neighborNIDs.keys()),
-  );
-  const destinationNode = neighborNIDs.get(destinationNID);
-  assert(destinationNode);
-  comm.send(
-    [result, { gid: jobID, key: null }],
-    { node: destinationNode, service: "store", method: "put" },
-    callback,
-  );
+function sendForGrouping(jobID, results, neighborNIDs, hash, callback) {
+  const barrier = util.waitAll(results.length, callback);
+  results.forEach((res) => {
+    const mapKey = Object.keys(res)[0];
+    const destinationNID = hash(
+      id.getID(mapKey),
+      Array.from(neighborNIDs.keys()),
+    );
+    const destinationNode = neighborNIDs.get(destinationNID);
+    assert(destinationNode);
+    comm.send(
+      [res, { gid: jobID, key: null }],
+      { node: destinationNode, service: "store", method: "put" },
+      barrier,
+    );
+  });
 }
 
 /**
@@ -39,30 +43,20 @@ function sendForGrouping(jobID, result, neighborNIDs, hash, callback) {
  * @param {types.Callback} callback
  */
 function notificationBarrier(jobID, supervisor, numNotifs, callback) {
-  let counter = 0;
-  let failed = false;
   const notifyRemote = {
     node: supervisor,
     service: `mr-${jobID}`,
     method: "call",
   };
-  const barrier = (e, _) => {
-    if (failed) return;
-    if (e) {
-      failed = true;
-      return callback(e);
-    }
+  return util.waitAll(numNotifs, (e, _) => {
+    if (e) return callback(e);
 
-    if (++counter == numNotifs) {
-      comm.send([], notifyRemote, (e, _) => {
-        if (e) {
-          failed = true;
-          return callback(e);
-        }
-      });
-    }
-  };
-  return barrier;
+    comm.send([], notifyRemote, (err, _) => {
+      if (err) {
+        return callback(err);
+      }
+    });
+  });
 }
 
 /**
@@ -84,16 +78,26 @@ function map(gid, supervisor, jobID, mapper, callback = (_e, _) => {}) {
         Object.values(neighbors).map((node) => [id.getNID(node), node]),
       );
 
-      keys.forEach((key) => {
+      const notif = notificationBarrier(
+        jobID,
+        supervisor,
+        keys.length,
+        callback,
+      );
+      keys.forEach((/** @type {store.LocalKey} */ key) => {
         store.get({ gid: gid, key: key }, (e, val) => {
           if (e) return callback(e);
 
+          let mapperRes = mapper(key, val);
+          if (!(mapperRes instanceof Array)) {
+            mapperRes = [mapperRes];
+          }
           sendForGrouping(
             jobID,
-            mapper(key, val),
+            mapperRes,
             neighborNIDNodeMap,
             id.consistentHash,
-            notificationBarrier(jobID, supervisor, keys.length, callback),
+            notif,
           );
           try {
           } catch (e) {
@@ -116,25 +120,28 @@ function reduce(jobID, reducer, callback = (_e, _) => {}) {
     // nothing was assigned to this node
     if (!exists) return callback(null, {});
 
-    // Below is NOT a race condition since only this reduce task has access to
-    // the group store with jobID as gid
-    store.get({ gid: jobID, key: null }, (e, keys) => {
+    store.getAll(jobID, (e, mapResults) => {
       if (e) return callback(e);
 
-      const mapResults = [];
-      keys.forEach((key) => {
-        store.get({ gid: jobID, key: key }, (e, v) => {
-          if (e) return callback(e);
+      assert(mapResults);
+      const organizedMapResults = mapResults.reduce((accumulator, obj, _) => {
+        const key = Object.keys(obj)[0];
+        const val = obj[key];
 
-          vals.push(v);
-        });
-      });
+        if (key in accumulator) {
+          accumulator[key].push(val);
+        } else {
+          accumulator[key] = [val];
+        }
+        return accumulator;
+      }, {});
 
-      const key = Object.keys(mapResults[0])[0];
-      const vals = mapResults.map((res) => Object.values(res)[0]);
       try {
-        const result = reducer(key, vals);
-        return callback(null, result);
+        const reduceResult = Object.entries(organizedMapResults).map(
+          ([key, val]) => reducer(key, val),
+        );
+        console.log("REDUCE RESULT", reduceResult);
+        return callback(null, reduceResult);
       } catch (e) {
         return callback(e);
       }

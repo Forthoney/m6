@@ -53,10 +53,7 @@ function store(config) {
         (e, v) => {
           if (Object.values(e).length !== 0) return callback(e, {});
 
-          const found = Object.values(v).reduce(
-            (acc, val) => acc.concat(val),
-            [],
-          );
+          const found = Object.values(v).flat();
           callback(e, found);
         },
       );

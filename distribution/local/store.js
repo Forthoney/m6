@@ -6,7 +6,11 @@ const util = require("../util/util");
 const types = require("../types");
 
 // Top level store directory path
-const storeDirpath = path.join(__dirname, "../../store");
+const storeDirpath = path.join(
+  __dirname,
+  "../../store",
+  global.nodeConfig.port.toString(),
+);
 
 /**
  * @typedef {string} LocalKey
@@ -19,7 +23,7 @@ const storeDirpath = path.join(__dirname, "../../store");
  */
 
 /**
- * @param {LocalKey | GroupKey} key
+ * @param {?LocalKey | GroupKey} key
  * @param {any} val
  * @param {types.Callback} callback
  */
@@ -79,6 +83,44 @@ function get(key, callback = () => {}) {
 }
 
 /**
+ * @callback GetAllCallback
+ * @param {?Error} err
+ * @param {Array | undefined} [values=undefined]
+ */
+
+/**
+ * @param {string} gid
+ * @param {GetAllCallback} callback
+ */
+function getAll(gid, callback = () => {}) {
+  readDir(path.join(storeDirpath, gid), (e, filenames) => {
+    if (e) {
+      return callback(e);
+    }
+
+    let numFiles = filenames.length;
+    let counter = 0;
+    let failed = false;
+    const content = [];
+    function barrier(e, v) {
+      if (failed) return;
+      if (e) {
+        failed = true;
+        return callback(e);
+      }
+
+      content.push(v);
+      if (++counter === numFiles) {
+        callback(null, content);
+      }
+    }
+    filenames.forEach((file) => {
+      readFile(path.join(storeDirpath, gid, file), barrier);
+    });
+  });
+}
+
+/**
  * @param {string} gid
  * @param {types.Callback} callback
  */
@@ -120,7 +162,17 @@ function put(val, key, callback = () => {}) {
  * @param {types.Callback} callback
  */
 function del(key, callback = () => {}) {
-  const fullKey = typeof key === "string" ? key : path.join(key.gid, key.key);
+  let fullKey;
+  if (typeof key === "string") {
+    fullKey = key;
+  } else {
+    if (key["key"] == null) {
+      return callback(Error("store:del called with null/invalid key"));
+    } else {
+      fullKey = path.join(key.gid, key.key);
+    }
+  }
+
   const filepath = path.join(storeDirpath, fullKey);
   fs.readFile(filepath, (readErr, file) => {
     if (readErr) return callback(Error(readErr.message));
@@ -133,4 +185,4 @@ function del(key, callback = () => {}) {
   });
 }
 
-module.exports = { get, hasGID, put, del };
+module.exports = { get, getAll, hasGID, put, del };
