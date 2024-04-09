@@ -39,7 +39,11 @@ function mr(config) {
               return callback(e);
             }
 
-            return callback(e, Object.values(results));
+            const mergedResults = Object.values(results)
+              .flat()
+              .filter((res) => Object.keys(res).length > 0);
+
+            return callback(e, mergedResults);
           },
         );
       }

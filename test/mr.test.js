@@ -107,7 +107,6 @@ test("(25 pts) all.mr:ncdc", (done) => {
   };
 
   let r1 = (key, values) => {
-    console.log("VALUES===============", values);
     let out = {};
     out[key] = values.reduce((a, b) => Math.max(a, b), -Infinity);
     return out;

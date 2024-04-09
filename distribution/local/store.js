@@ -48,7 +48,13 @@ function resolveFilePath(key, val, callback) {
  */
 function readDir(path, callback) {
   fs.readdir(path, (err, files) => {
-    err ? callback(Error(err.message)) : callback(null, files);
+    if (err) {
+      const wrappedErr = Error(err.message);
+      wrappedErr["code"] = err.code;
+      return callback(wrappedErr);
+    } else {
+      callback(null, files);
+    }
   });
 }
 
@@ -75,7 +81,13 @@ function get(key, callback = () => {}) {
     return readFile(path.join(storeDirpath, key), callback);
   } else {
     if (key.key === null) {
-      return readDir(path.join(storeDirpath, key.gid), callback);
+      return readDir(path.join(storeDirpath, key.gid), (e, v) => {
+        if (e) {
+          return e["code"] === "ENOENT" ? callback(null, []) : callback(e);
+        } else {
+          return callback(null, v);
+        }
+      });
     } else {
       return readFile(path.join(storeDirpath, key.gid, key.key), callback);
     }

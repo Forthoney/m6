@@ -67,42 +67,53 @@ function notificationBarrier(jobID, supervisor, numNotifs, callback) {
  * @param {types.Callback} callback
  */
 function map(gid, supervisor, jobID, mapper, callback = (_e, _) => {}) {
-  store.get({ gid: gid, key: null }, (e, keys) => {
+  store.hasGID(gid, (e, exists) => {
     if (e) return callback(e);
+    if (!exists) {
+      const notifyRemote = {
+        node: supervisor,
+        service: `mr-${jobID}`,
+        method: "call",
+      };
+      return comm.send([], notifyRemote, callback);
+    }
 
-    groups.get(gid, (e, neighbors) => {
+    store.get({ gid: gid, key: null }, (e, keys) => {
       if (e) return callback(e);
+      groups.get(gid, (e, neighbors) => {
+        if (e) return callback(e);
 
-      assert(neighbors);
-      const neighborNIDNodeMap = new Map(
-        Object.values(neighbors).map((node) => [id.getNID(node), node]),
-      );
+        assert(neighbors);
+        const neighborNIDNodeMap = new Map(
+          Object.values(neighbors).map((node) => [id.getNID(node), node]),
+        );
 
-      const notif = notificationBarrier(
-        jobID,
-        supervisor,
-        keys.length,
-        callback,
-      );
-      keys.forEach((/** @type {store.LocalKey} */ key) => {
-        store.get({ gid: gid, key: key }, (e, val) => {
-          if (e) return callback(e);
+        const notif = notificationBarrier(
+          jobID,
+          supervisor,
+          keys.length,
+          callback,
+        );
+        keys.forEach((/** @type {store.LocalKey} */ key) => {
+          store.get({ gid: gid, key: key }, (e, val) => {
+            if (e) return callback(e);
 
-          let mapperRes = mapper(key, val);
-          if (!(mapperRes instanceof Array)) {
-            mapperRes = [mapperRes];
-          }
-          sendForGrouping(
-            jobID,
-            mapperRes,
-            neighborNIDNodeMap,
-            id.consistentHash,
-            notif,
-          );
-          try {
-          } catch (e) {
-            callback(e);
-          }
+            let mapperRes = mapper(key, val);
+            if (!(mapperRes instanceof Array)) {
+              mapperRes = [mapperRes];
+            }
+            sendForGrouping(
+              jobID,
+              mapperRes,
+              neighborNIDNodeMap,
+              id.consistentHash,
+              notif,
+            );
+            try {
+            } catch (e) {
+              callback(e);
+            }
+          });
         });
       });
     });
@@ -140,7 +151,6 @@ function reduce(jobID, reducer, callback = (_e, _) => {}) {
         const reduceResult = Object.entries(organizedMapResults).map(
           ([key, val]) => reducer(key, val),
         );
-        console.log("REDUCE RESULT", reduceResult);
         return callback(null, reduceResult);
       } catch (e) {
         return callback(e);
