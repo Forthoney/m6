@@ -93,6 +93,7 @@ function storeBarrier(
 function map(gid, supervisor, jobID, mapper, callback = () => {}) {
   store.get({gid: gid, key: null}, (e, keys) => {
     if (e) return callback(e);
+
     groups.get(gid, (e, neighbors) => {
       if (e) return callback(e);
 

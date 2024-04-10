@@ -130,6 +130,7 @@ test('(25 pts) all.mr:ncdc', (done) => {
     distribution.ncdc.store.get(null, (e, v) => {
       try {
         expect(e).toEqual({});
+        console.log(v);
         expect(v.length).toBe(dataset.length);
       } catch (e) {
         done(e);

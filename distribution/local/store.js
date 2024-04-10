@@ -99,7 +99,7 @@ function get(key, callback = () => {}) {
     if (key.key === null) {
       return readDir(path.join(storeDirpath, key.gid), (e, v) => {
         if (e) {
-          return e['code'] === 'ENOENT' ? callback(null, null) : callback(e);
+          return e['code'] === 'ENOENT' ? callback(null, []) : callback(e);
         } else {
           return callback(null, v);
         }
