@@ -7,7 +7,6 @@ const groups = require("./groups");
 const id = require("../util/id");
 const types = require("../types");
 const util = require("../util/util");
-const { randomInt } = require("node:crypto");
 
 /**
  * Sends the result of the map operation to the corresponding node to reduce
@@ -17,24 +16,6 @@ const { randomInt } = require("node:crypto");
  * @param {id.HashFunc} hash
  * @param {types.Callback} callback
  */
-function sendForGrouping(jobID, results, neighborNIDs, hash, callback) {
-  const barrier = util.waitAll(results.length, callback);
-  results.forEach((res) => {
-    const mapKey = Object.keys(res)[0];
-    const destinationNID = hash(
-      id.getID(mapKey),
-      Array.from(neighborNIDs.keys()),
-    );
-    const destinationNode = neighborNIDs.get(destinationNID);
-    assert(destinationNode);
-    const key = id.getID(res) + id.getSID(global.nodeConfig) + randomInt(1000);
-    comm.send(
-      [res, { gid: jobID, key }],
-      { node: destinationNode, service: "store", method: "put" },
-      barrier,
-    );
-  });
-}
 
 /**
  * Waits until a certain number of notifications have been received.
@@ -61,6 +42,43 @@ function notificationBarrier(jobID, supervisor, numNotifs, callback) {
   });
 }
 
+function storeBarrier(
+  jobID,
+  supervisor,
+  mapperRes,
+  numKeys,
+  neighborNIDNodeMap,
+  callback,
+) {
+  const neighborNIDS = Array.from(neighborNIDNodeMap.keys());
+  return util.waitAll(numKeys, (e) => {
+    if (e) return callback(e);
+
+    const entries = Array.from(mapperRes.entries());
+    const notif = notificationBarrier(
+      jobID,
+      supervisor,
+      entries.length,
+      callback,
+    );
+    entries.forEach(([key, val]) => {
+      const storeID = id.getID(key) + id.getSID(global.nodeConfig);
+      const destinationNID = id.consistentHash(storeID, neighborNIDS);
+      const destinationNode = neighborNIDNodeMap.get(destinationNID);
+      assert(destinationNode);
+      comm.send(
+        [{ [key]: val }, { gid: jobID, key: storeID }],
+        {
+          node: destinationNode,
+          service: "store",
+          method: "put",
+        },
+        notif,
+      );
+    });
+  });
+}
+
 /**
  * @param {string} gid
  * @param {id.ID} jobID
@@ -79,31 +97,32 @@ function map(gid, supervisor, jobID, mapper, callback = () => {}) {
         Object.values(neighbors).map((node) => [id.getNID(node), node]),
       );
 
-      const notif = notificationBarrier(
+      const mapperRes = new Map();
+      const storeBar = storeBarrier(
         jobID,
         supervisor,
+        mapperRes,
         keys.length,
+        neighborNIDNodeMap,
         callback,
       );
-      keys.forEach((/** @type {store.LocalKey} */ key) => {
-        store.get({ gid: gid, key: key }, (e, val) => {
-          if (e) return callback(e);
+      keys.forEach((/** @type {store.LocalKey} */ storeKey) => {
+        store.get({ gid: gid, key: storeKey }, (e, data) => {
+          if (e) return storeBar(e);
 
-          let mapperRes = mapper(key, val);
-          if (!(mapperRes instanceof Array)) {
-            mapperRes = [mapperRes];
-          }
-          sendForGrouping(
-            jobID,
-            mapperRes,
-            neighborNIDNodeMap,
-            id.consistentHash,
-            notif,
-          );
           try {
+            const result = mapper(storeKey, data);
+            assert(Object.entries(result).length === 1);
+            const [key, val] = Object.entries(result)[0];
+            if (mapperRes.has(key)) {
+              mapperRes.get(key).push(val);
+            } else {
+              mapperRes.set(key, [val]);
+            }
           } catch (e) {
-            callback(e);
+            return storeBar(e);
           }
+          storeBar();
         });
       });
     });
@@ -120,14 +139,14 @@ function reduce(jobID, reducer, callback = (_e, _) => {}) {
     if (e) return callback(e);
 
     assert(mapResults);
-    const organizedMapResults = mapResults.reduce((accumulator, obj, _) => {
+    const organizedMapResults = mapResults.reduce((accumulator, obj) => {
       const key = Object.keys(obj)[0];
       const val = obj[key];
 
       if (key in accumulator) {
-        accumulator[key].push(val);
+        accumulator[key] = accumulator[key].concat(val);
       } else {
-        accumulator[key] = [val];
+        accumulator[key] = val;
       }
       return accumulator;
     }, {});

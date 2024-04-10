@@ -133,7 +133,8 @@ function put(val, key, callback = () => {}) {
   resolveFilePath(key, val, (e, fullpath) => {
     if (e) return callback(e);
 
-    fs.writeFile(fullpath, util.serialize(val), (err) => {
+    const serialized = util.serialize(val);
+    fs.writeFile(fullpath, serialized, { flush: true }, (err) => {
       err ? callback(Error(err.message)) : callback(null, val);
     });
   });

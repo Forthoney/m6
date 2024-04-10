@@ -1,8 +1,8 @@
 // @ts-check
 
-const http = require('http');
-const serialization = require('../util/serialization');
-const types = require('../types');
+const http = require("http");
+const serialization = require("../util/serialization");
+const types = require("../types");
 
 /**
  * @typedef {Object} LocalRemote
@@ -22,24 +22,28 @@ function send(message, remote, callback = (_e, _) => {}) {
     hostname: remote.node.ip,
     port: remote.node.port,
     path: `/${remote.service}/${remote.method}`,
-    method: 'PUT',
+    method: "PUT",
     headers: {
-      'content-type': 'application/json',
-      'content-length': msg.length,
+      "content-type": "application/json",
+      "content-length": msg.length,
     },
   };
   const req = http.request(options, (res) => {
-    let body = '';
-    res.on('data', (chunk) => {
+    let body = "";
+    res.on("data", (chunk) => {
       body += chunk;
     });
-    res.on('end', () => {
-      const [err, content] = serialization.deserialize(body);
-      callback(err, content);
+    res.on("end", () => {
+      try {
+        const [err, content] = serialization.deserialize(body);
+        callback(err, content);
+      } catch (err) {
+        callback(err);
+      }
     });
   });
 
-  req.on('error', (e) => {
+  req.on("error", (e) => {
     callback(new Error(`Error on Request: ${e.message}`), null);
   });
 
@@ -47,4 +51,4 @@ function send(message, remote, callback = (_e, _) => {}) {
   req.end();
 }
 
-module.exports = {send};
+module.exports = { send };

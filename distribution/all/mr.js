@@ -45,12 +45,16 @@ function mr(config) {
               .filter((res) => Object.keys(res).length > 0);
 
             // Cleanup data
-            store(config).delGroup(jobID, (e, _) => {
-              if (Object.values(e).length !== 0) {
-                return callback(e);
-              }
+            if (false) {
+              store(config).delGroup(jobID, (e, _) => {
+                if (Object.values(e).length !== 0) {
+                  return callback(e);
+                }
+                return callback(e, mergedResults);
+              });
+            } else {
               return callback(e, mergedResults);
-            });
+            }
           },
         );
       }
