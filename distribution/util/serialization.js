@@ -1,17 +1,17 @@
 // workaround for no class eslint rule
-const typedef = Symbol("typedef");
+const typedef = Symbol('typedef');
 
 function referenceConstructor(ref) {
-  return { [typedef]: "Reference", id: ref };
+  return {[typedef]: 'Reference', id: ref};
 }
 
 function objectIdConstructor(oid) {
-  return { [typedef]: "ObjectId", id: oid };
+  return {[typedef]: 'ObjectId', id: oid};
 }
 
 function idMapConstructor() {
   const instance = {
-    [typedef]: "IdMap",
+    [typedef]: 'IdMap',
     superclass: new Map(),
     id: 0,
     register: (obj, self = instance) => {
@@ -31,7 +31,7 @@ function idMapConstructor() {
 
 function bidirectionalIdMap() {
   const instance = {
-    [typedef]: "BidirectionalIdMap",
+    [typedef]: 'BidirectionalIdMap',
     objToId: idMapConstructor(),
     idToObj: new Map(),
     register: (obj, self = instance) => {
@@ -52,24 +52,24 @@ function bidirectionalIdMap() {
 
 function createGlobalIndex() {
   const toCheck = [
-    "fs",
-    "http",
-    "https",
-    "url",
-    "path",
-    "os",
-    "events",
-    "stream",
-    "util",
-    "querystring",
-    "zlib",
-    "buffer",
-    "child_process",
-    "cluster",
-    "dgram",
-    "dns",
-    "http2",
-    "v8",
+    'fs',
+    'http',
+    'https',
+    'url',
+    'path',
+    'os',
+    'events',
+    'stream',
+    'util',
+    'querystring',
+    'zlib',
+    'buffer',
+    'child_process',
+    'cluster',
+    'dgram',
+    'dns',
+    'http2',
+    'v8',
   ].map(require);
   toCheck.push(globalThis);
 
@@ -78,7 +78,7 @@ function createGlobalIndex() {
   while (toCheck.length > 0) {
     const elem = toCheck.shift();
     bidirectionalMap.register(elem);
-    if (elem != null && typeof elem === "object") {
+    if (elem != null && typeof elem === 'object') {
       Reflect.ownKeys(elem).forEach((key) => {
         const child = elem[key];
         if (!bidirectionalMap.hasObj(child)) {
@@ -107,28 +107,28 @@ function serialize(object) {
  */
 function serializeInner(object, mapping) {
   if (object === null) {
-    return "null";
+    return 'null';
   }
 
   const objType = typeof object;
   switch (objType) {
-    case "number":
-    case "boolean":
+    case 'number':
+    case 'boolean':
       return object.toString();
-    case "string":
+    case 'string':
       return JSON.stringify(object);
-    case "undefined":
+    case 'undefined':
       return '{"type": "undefined", "value": "undefined"}';
-    case "function":
-      return GLOBAL_INDEX.hasObj(object)
-        ? `{"type": "builtin", "value": ${GLOBAL_INDEX.getFromObj(object)}}`
-        : `{"type": "function", "value": ${JSON.stringify(object.toString())}}`;
-    case "object":
-      return mapping.has(object)
-        ? `{"type": "Reference", "value": "${mapping.get(object)}"}`
-        : serializeComplex(object, mapping);
+    case 'function':
+      return GLOBAL_INDEX.hasObj(object) ?
+        `{"type": "builtin", "value": ${GLOBAL_INDEX.getFromObj(object)}}` :
+        `{"type": "function", "value": ${JSON.stringify(object.toString())}}`;
+    case 'object':
+      return mapping.has(object) ?
+        `{"type": "Reference", "value": "${mapping.get(object)}"}` :
+        serializeComplex(object, mapping);
     default:
-      throw Error("Unsupported type");
+      throw Error('Unsupported type');
   }
 }
 
@@ -137,7 +137,7 @@ function serializeArray(array, mapping) {
   const stringifiedArr = array.map((elem) => serializeInner(elem, mapping));
   const objectIdMetadata = `{"type": "ObjectId", "value": ${objectId}}`;
   stringifiedArr.push(objectIdMetadata);
-  return `[${stringifiedArr.join(",")}]`;
+  return `[${stringifiedArr.join(',')}]`;
 }
 
 function serializeObject(object, mapping) {
@@ -146,7 +146,7 @@ function serializeObject(object, mapping) {
     serializeKeyValue(...entry, mapping),
   );
   entries.push(`"objectId": {"type": "ObjectId", "value": ${objectId}}`);
-  return `{${entries.join(",")}}`;
+  return `{${entries.join(',')}}`;
 }
 
 /*
@@ -181,25 +181,25 @@ function serializeComplex(object, mapping) {
 
 function parseWrapper(item) {
   switch (item.type) {
-    case "boolean":
-    case "number":
+    case 'boolean':
+    case 'number':
       return JSON.parse(item.value);
-    case "string":
-    case "ROOT":
+    case 'string':
+    case 'ROOT':
       return item.value;
-    case "undefined":
+    case 'undefined':
       return undefined;
-    case "function":
+    case 'function':
       return new Function(`return ${item.value}`)();
-    case "builtin":
+    case 'builtin':
       return GLOBAL_INDEX.getFromId(JSON.parse(item.value));
-    case "Date":
+    case 'Date':
       return new Date(item.value);
-    case "Error":
+    case 'Error':
       return Error(item.value);
-    case "Reference":
+    case 'Reference':
       return referenceConstructor(JSON.parse(item.value));
-    case "ObjectId":
+    case 'ObjectId':
       return objectIdConstructor(JSON.parse(item.value));
     default:
       throw Error(`unexpected type: ${item.type}`);
@@ -209,14 +209,14 @@ function parseWrapper(item) {
 function createObjectIdMap(obj, objectIdMap) {
   Object.values(obj).forEach((item) => {
     if (item == null) return;
-    if (item[typedef] === "ObjectId") {
+    if (item[typedef] === 'ObjectId') {
       objectIdMap.set(item.id, obj);
       if (obj instanceof Array) {
         obj.pop();
       } else {
         delete obj.objectId;
       }
-    } else if (typeof item === "object") {
+    } else if (typeof item === 'object') {
       createObjectIdMap(item, objectIdMap);
     }
   });
@@ -227,13 +227,13 @@ function replaceReferences(object, objectIdMap) {
     const [prop, item] = entry;
     if (item == null) return;
 
-    if (item[typedef] === "Reference") {
+    if (item[typedef] === 'Reference') {
       const referencedObject = objectIdMap.get(item.id);
       if (referencedObject != null) {
         // Replace the Reference with the corresponding object from objectIdMap
         object[prop] = referencedObject;
       } else {
-        throw Error("Object ID not found");
+        throw Error('Object ID not found');
       }
     } else if (item instanceof Object) {
       // If the current property is an object, recursively call the function
@@ -243,7 +243,7 @@ function replaceReferences(object, objectIdMap) {
 }
 
 function removeLeadingUnderscore(obj) {
-  if (obj && typeof obj === "object") {
+  if (obj && typeof obj === 'object') {
     if (Array.isArray(obj)) {
       obj.forEach((element, index) => {
         obj[index] = removeLeadingUnderscore(element);
@@ -252,7 +252,7 @@ function removeLeadingUnderscore(obj) {
       const newObj = {};
       Object.keys(obj).forEach((key) => {
         if (key.match(/(^_+type$)|(^_+value$)|(^_+objectId$)/g)) {
-          const newKey = key.replace(/^_/, "");
+          const newKey = key.replace(/^_/, '');
           newObj[newKey] = removeLeadingUnderscore(obj[key]);
         } else {
           newObj[key] = removeLeadingUnderscore(obj[key]);
@@ -271,7 +271,7 @@ function deserialize(string) {
   const parsed = JSON.parse(string, (key, item) => {
     removeUnderscore =
       removeUnderscore || key.match(/(^_+type$)|(^_+value$)|(^_+objectId$)/g);
-    return item instanceof Object && "type" in item ? parseWrapper(item) : item;
+    return item instanceof Object && 'type' in item ? parseWrapper(item) : item;
   });
   const objectIdMap = new Map();
   if (parsed instanceof Object) {

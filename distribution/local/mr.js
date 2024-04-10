@@ -1,35 +1,30 @@
 // @ts-check
+/** @typedef {import("../types").Callback} Callback */
+/** @typedef {import("../types").NodeInfo} NodeInfo*/
+/** @typedef {import("../types").Mapper} Mapper */
+/** @typedef {import("../types").Reducer} Reducer */
 
-const assert = require("node:assert");
-const store = require("./store");
-const comm = require("./comm");
-const groups = require("./groups");
-const id = require("../util/id");
-const types = require("../types");
-const util = require("../util/util");
-
-/**
- * Sends the result of the map operation to the corresponding node to reduce
- * @param {id.ID} jobID
- * @param {Array} results
- * @param {Map.<string, types.NodeInfo>} neighborNIDs
- * @param {id.HashFunc} hash
- * @param {types.Callback} callback
- */
+const assert = require('node:assert');
+const store = require('./store');
+const comm = require('./comm');
+const groups = require('./groups');
+const id = require('../util/id');
+const util = require('../util/util');
 
 /**
  * Waits until a certain number of notifications have been received.
  * It will then call the next action.
  * @param {id.ID} jobID
- * @param {types.NodeInfo} supervisor
+ * @param {NodeInfo} supervisor
  * @param {number} numNotifs
- * @param {types.Callback} callback
+ * @param {Callback} callback
+ * @return {Callback}
  */
 function notificationBarrier(jobID, supervisor, numNotifs, callback) {
   const notifyRemote = {
     node: supervisor,
     service: `mr-${jobID}`,
-    method: "call",
+    method: 'call',
   };
   return util.waitAll(numNotifs, (e, _) => {
     if (e) return callback(e);
@@ -42,13 +37,22 @@ function notificationBarrier(jobID, supervisor, numNotifs, callback) {
   });
 }
 
+/**
+ * @param {string} jobID
+ * @param {NodeInfo} supervisor
+ * @param {Map<string, Array>} mapperRes
+ * @param {number} numKeys
+ * @param {Map<string, NodeInfo>} neighborNIDNodeMap
+ * @param {Callback} callback
+ * @return {Callback}
+ */
 function storeBarrier(
-  jobID,
-  supervisor,
-  mapperRes,
-  numKeys,
-  neighborNIDNodeMap,
-  callback,
+    jobID,
+    supervisor,
+    mapperRes,
+    numKeys,
+    neighborNIDNodeMap,
+    callback,
 ) {
   const neighborNIDS = Array.from(neighborNIDNodeMap.keys());
   return util.waitAll(numKeys, (e) => {
@@ -56,10 +60,10 @@ function storeBarrier(
 
     const entries = Array.from(mapperRes.entries());
     const notif = notificationBarrier(
-      jobID,
-      supervisor,
-      entries.length,
-      callback,
+        jobID,
+        supervisor,
+        entries.length,
+        callback,
     );
     entries.forEach(([key, val]) => {
       const storeID = id.getID(key) + id.getSID(global.nodeConfig);
@@ -67,13 +71,13 @@ function storeBarrier(
       const destinationNode = neighborNIDNodeMap.get(destinationNID);
       assert(destinationNode);
       comm.send(
-        [{ [key]: val }, { gid: jobID, key: storeID }],
-        {
-          node: destinationNode,
-          service: "store",
-          method: "put",
-        },
-        notif,
+          [{[key]: val}, {gid: jobID, key: storeID}],
+          {
+            node: destinationNode,
+            service: 'store',
+            method: 'put',
+          },
+          notif,
       );
     });
   });
@@ -81,48 +85,60 @@ function storeBarrier(
 
 /**
  * @param {string} gid
+ * @param {NodeInfo} supervisor
  * @param {id.ID} jobID
- * @param {types.NodeInfo} supervisor
- * @param {types.Mapper} mapper
- * @param {types.Callback} callback
+ * @param {Mapper} mapper
+ * @param {Callback} callback
  */
 function map(gid, supervisor, jobID, mapper, callback = () => {}) {
-  store.get({ gid: gid, key: null }, (e, keys) => {
+  store.get({gid: gid, key: null}, (e, keys) => {
     if (e) return callback(e);
     groups.get(gid, (e, neighbors) => {
       if (e) return callback(e);
 
       assert(neighbors);
       const neighborNIDNodeMap = new Map(
-        Object.values(neighbors).map((node) => [id.getNID(node), node]),
+          Object.values(neighbors).map((node) => [id.getNID(node), node]),
       );
 
       const mapperRes = new Map();
       const storeBar = storeBarrier(
-        jobID,
-        supervisor,
-        mapperRes,
-        keys.length,
-        neighborNIDNodeMap,
-        callback,
+          jobID,
+          supervisor,
+          mapperRes,
+          keys.length,
+          neighborNIDNodeMap,
+          callback,
       );
       keys.forEach((/** @type {store.LocalKey} */ storeKey) => {
-        store.get({ gid: gid, key: storeKey }, (e, data) => {
+        store.get({gid: gid, key: storeKey}, (e, data) => {
           if (e) return storeBar(e);
 
           try {
             const result = mapper(storeKey, data);
-            assert(Object.entries(result).length === 1);
-            const [key, val] = Object.entries(result)[0];
-            if (mapperRes.has(key)) {
-              mapperRes.get(key).push(val);
+            if (result instanceof Array) {
+              result.forEach((res) => {
+                Object.entries(res).forEach(([key, val]) => {
+                  if (mapperRes.has(key)) {
+                    mapperRes.get(key).push(val);
+                  } else {
+                    mapperRes.set(key, [val]);
+                  }
+                });
+              });
             } else {
-              mapperRes.set(key, [val]);
+              Object.entries(result).forEach(([key, val]) => {
+                if (mapperRes.has(key)) {
+                  mapperRes.get(key).push(val);
+                } else {
+                  mapperRes.set(key, [val]);
+                }
+              });
             }
           } catch (e) {
             return storeBar(e);
           }
-          storeBar();
+          storeBar(null);
         });
       });
     });
@@ -131,8 +147,8 @@ function map(gid, supervisor, jobID, mapper, callback = () => {}) {
 
 /**
  * @param {id.ID} jobID
- * @param {types.Reducer} reducer
- * @param {types.Callback} callback
+ * @param {Reducer} reducer
+ * @param {Callback} callback
  */
 function reduce(jobID, reducer, callback = (_e, _) => {}) {
   store.getAll(jobID, (e, mapResults) => {
@@ -153,7 +169,7 @@ function reduce(jobID, reducer, callback = (_e, _) => {}) {
 
     try {
       const reduceResult = Object.entries(organizedMapResults).map(
-        ([key, val]) => reducer(key, val),
+          ([key, val]) => reducer(key, val),
       );
       return callback(null, reduceResult);
     } catch (e) {
@@ -162,4 +178,4 @@ function reduce(jobID, reducer, callback = (_e, _) => {}) {
   });
 }
 
-module.exports = { map, reduce };
+module.exports = {map, reduce};

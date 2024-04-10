@@ -1,14 +1,22 @@
-const serialization = require("./serialization");
-const id = require("./id");
-const wire = require("./wire");
+// @ts-check
+/** @typedef {import("../types").Callback} Callback */
+
+const serialization = require('./serialization');
+const id = require('./id');
+const wire = require('./wire');
 
 /**
+ * Returns a function with an internal counter. The returned function will
+ * execute the callback after being called n times. If it encounters an
+ * error before then, it will short circuit.
+ * If n is 0, it will return a thunk and immediately execute the callback
  * @param {number} n
- * @param {types.Callback} callback
+ * @param {Callback} callback
+ * @return {Callback}
  */
 function waitAll(n, callback) {
   if (n === 0) {
-    callback();
+    callback(null, null);
     return () => {};
   }
 
@@ -22,7 +30,7 @@ function waitAll(n, callback) {
     }
 
     if (++counter === n) {
-      callback();
+      callback(null, null);
     }
   }
 

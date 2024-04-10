@@ -1,20 +1,23 @@
 // @ts-check
-const id = require('../util/id');
-const types = require('../types');
+/** @typedef {import("../types").Group} Group */
+/** @typedef {import("../types").NodeInfo} NodeInfo */
 
-/** @type {Map.<string, types.Group>} */
+const id = require('../util/id');
+
+/** @type {Map.<string, Group>} */
 const groupMap = new Map();
 
 /**
- * @callback groupCallback
+ * @callback GroupCallback
  * @param {?Error} error
- * @param {types.Group} [group=undefined]
+ * @param {Group} [group=undefined]
  */
 
 /**
  * @param {(object|string)} config
- * @param {types.Group} group
- * @param {groupCallback} callback
+ * @param {Group} group
+ * @param {GroupCallback} callback
+ * @return {void}
  */
 function put(config, group, callback = (_e, _) => {}) {
   if (typeof group !== 'object') {
@@ -29,7 +32,7 @@ function put(config, group, callback = (_e, _) => {}) {
 
 /**
  * @param {string} name
- * @param {groupCallback} callback
+ * @param {GroupCallback} callback
  */
 function get(name, callback = () => {}) {
   const group = groupMap.get(name);
@@ -42,7 +45,7 @@ function get(name, callback = () => {}) {
 
 /**
  * @param {string} name
- * @param {groupCallback} callback
+ * @param {GroupCallback} callback
  */
 function del(name, callback = () => {}) {
   const deleted = groupMap.get(name);
@@ -56,8 +59,8 @@ function del(name, callback = () => {}) {
 
 /**
  * @param {string} name
- * @param {types.NodeInfo} node
- * @param {groupCallback} callback
+ * @param {NodeInfo} node
+ * @param {GroupCallback} callback
  */
 function add(name, node, callback = () => {}) {
   const group = groupMap.get(name);
@@ -73,7 +76,7 @@ function add(name, node, callback = () => {}) {
 /**
  * @param {string} name
  * @param {id.ID} sid
- * @param {groupCallback} callback
+ * @param {GroupCallback} callback
  */
 function rem(name, sid, callback = () => {}) {
   const group = groupMap.get(name);

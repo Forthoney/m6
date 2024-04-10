@@ -1,14 +1,17 @@
 // @ts-check
+/** @typedef {import("../types").Callback} Callback */
+/** @typedef {import("../types").Group} Group */
+/** @typedef {import("../types").NodeInfo} NodeInfo */
 
 const comm = require('./comm');
 const local = require('../local/local');
 const id = require('../util/id');
-const types = require('../types');
 
 const mySid = id.getSID(global.nodeConfig);
 
 /**
  * @param {object} config
+ * @return {object}
  */
 function groups(config) {
   /**
@@ -31,7 +34,7 @@ function groups(config) {
 
   /**
    * @param {string} name
-   * @param {types.Callback} callback
+   * @param {Callback} callback
    */
   function get(name, callback = () => {}) {
     accumulateCommLocal('get', name, callback);
@@ -39,8 +42,9 @@ function groups(config) {
 
   /**
    * @param {object} newConfig
-   * @param {types.Group} group
-   * @param {types.Callback} callback
+   * @param {Group} group
+   * @param {Callback} callback
+   * @return {void}
    */
   function put(newConfig, group, callback = () => {}) {
     newConfig = typeof newConfig === 'string' ? {gid: newConfig} : newConfig;
@@ -74,7 +78,7 @@ function groups(config) {
 
   /**
    * @param {string} name
-   * @param {types.Callback} callback
+   * @param {Callback} callback
    */
   function del(name, callback = () => {}) {
     accumulateCommLocal('del', name, (e, v) => {
@@ -85,8 +89,8 @@ function groups(config) {
 
   /**
    * @param {string} name
-   * @param {types.NodeInfo} node
-   * @param {types.Callback} callback
+   * @param {NodeInfo} node
+   * @param {Callback} callback
    */
   function add(name, node, callback = () => {}) {
     accumulateCommLocal('add', name, node, callback);
@@ -95,7 +99,7 @@ function groups(config) {
   /**
    * @param {string} name
    * @param {id.ID} sid
-   * @param {types.Callback} callback
+   * @param {Callback} callback
    */
   function rem(name, sid, callback = () => {}) {
     accumulateCommLocal('rem', name, sid, callback);

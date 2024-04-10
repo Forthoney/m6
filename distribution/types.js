@@ -18,7 +18,7 @@
  * @callback Reducer
  * @param {any} key
  * @param {Array} value
- * @returns {object}
+ * @returns {object | object[]}
  */
 
 /**

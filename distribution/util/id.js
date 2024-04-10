@@ -67,8 +67,8 @@ function naiveHash(kid, nids) {
 }
 
 /**
- * @param {number} numKID
  * @param {number[]} numNIDs
+ * @param {number} numKID
  * @return {number}
  */
 function findDestinationNum(numNIDs, numKID) {

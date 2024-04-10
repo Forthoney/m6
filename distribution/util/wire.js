@@ -34,6 +34,7 @@ function createRPC(fn, fnID = getID(fn)) {
  * to one that takes a callback as its last argument and returns the value
  * to the callback.
  * @param {Function} func
+ * @return {Function}
  */
 function toAsync(func) {
   return function(...args) {

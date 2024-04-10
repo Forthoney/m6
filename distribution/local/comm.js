@@ -1,20 +1,22 @@
 // @ts-check
+/** @typedef {import("../types").Callback} Callback */
+/** @typedef {import("../types").NodeInfo} NodeInfo */
 
-const http = require("http");
-const serialization = require("../util/serialization");
-const types = require("../types");
+const http = require('http');
+const serialization = require('../util/serialization');
 
 /**
  * @typedef {Object} LocalRemote
  * @property {string} service
  * @property {string} method
- * @property {types.NodeInfo} node
+ * @property {NodeInfo} node
  */
 
 /**
  * @param {Array} message
  * @param {LocalRemote} remote
- * @param {types.Callback} callback
+ * @param {Callback} callback
+ * @return {void}
  */
 function send(message, remote, callback = (_e, _) => {}) {
   const msg = serialization.serialize(message);
@@ -22,18 +24,18 @@ function send(message, remote, callback = (_e, _) => {}) {
     hostname: remote.node.ip,
     port: remote.node.port,
     path: `/${remote.service}/${remote.method}`,
-    method: "PUT",
+    method: 'PUT',
     headers: {
-      "content-type": "application/json",
-      "content-length": msg.length,
+      'content-type': 'application/json',
+      'content-length': msg.length,
     },
   };
   const req = http.request(options, (res) => {
-    let body = "";
-    res.on("data", (chunk) => {
+    let body = '';
+    res.on('data', (chunk) => {
       body += chunk;
     });
-    res.on("end", () => {
+    res.on('end', () => {
       try {
         const [err, content] = serialization.deserialize(body);
         callback(err, content);
@@ -43,7 +45,7 @@ function send(message, remote, callback = (_e, _) => {}) {
     });
   });
 
-  req.on("error", (e) => {
+  req.on('error', (e) => {
     callback(new Error(`Error on Request: ${e.message}`), null);
   });
 
@@ -51,4 +53,4 @@ function send(message, remote, callback = (_e, _) => {}) {
   req.end();
 }
 
-module.exports = { send };
+module.exports = {send};

@@ -1,12 +1,14 @@
 // @ts-check
-const types = require('../types');
+
+/** @typedef {import("../types").Callback} Callback */
 
 /** @type {Map.<string, object>} */
 const services = new Map();
 
 /**
  * @param {object} service
- * @param {types.Callback} callback
+ * @param {Callback} callback
+ * @return {void}
  */
 function get(service, callback = () => {}) {
   if (services.has(service)) {
@@ -21,7 +23,8 @@ function get(service, callback = () => {}) {
 /**
  * @param {object} service
  * @param {string} route
- * @param {types.Callback} callback
+ * @param {Callback} callback
+ * @return {void}
  */
 function put(service, route, callback = () => {}) {
   services.set(route, service);

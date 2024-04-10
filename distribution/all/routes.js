@@ -1,15 +1,17 @@
 // @ts-check
+/** @typedef {import("../types").Callback} Callback */
+
 const comm = require('./comm');
-const types = require('../types');
 
 /**
  * @param {object} config
+ * @return {object}
  */
 function routes(config) {
   /**
    * @param {object} service
    * @param {string} name
-   * @param {types.Callback} callback
+   * @param {Callback} callback
    */
   function put(service, name, callback = () => {}) {
     comm(config).send(

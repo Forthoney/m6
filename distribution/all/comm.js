@@ -1,7 +1,9 @@
 // @ts-check
-const local = require("../local/local");
-const types = require("../types");
-const { getSID } = require("../util/id");
+/** @typedef {import("../types").Callback} Callback */
+
+const assert = require('node:assert');
+const local = require('../local/local');
+const {getSID} = require('../util/id');
 
 /**
  * @typedef {Object} AllRemote
@@ -11,17 +13,18 @@ const { getSID } = require("../util/id");
 
 /**
  * @param {object} config
+ * @return {object}
  */
 function comm(config) {
   const context = {
-    gid: config.gid || "all",
+    gid: config.gid || 'all',
   };
   const mySid = getSID(global.nodeConfig);
 
   /**
    * @param {Array} message
    * @param {object} remote
-   * @param {types.Callback} callback
+   * @param {Callback} callback
    */
   function send(message, remote, callback = (_e, _) => {}) {
     local.groups.get(context.gid, (e, group) => {
@@ -34,10 +37,11 @@ function comm(config) {
       const errors = {};
       const results = {};
       let count = 0;
+      assert(group);
       const entries = Object.entries(group);
 
       entries.forEach(([sid, node]) => {
-        Object.assign(remote, { node: node });
+        Object.assign(remote, {node: node});
         local.comm.send(message, remote, (e, v) => {
           if (e) {
             errors[sid] = e;
@@ -52,7 +56,7 @@ function comm(config) {
     });
   }
 
-  return { send };
+  return {send};
 }
 
 module.exports = comm;
