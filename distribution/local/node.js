@@ -1,8 +1,8 @@
-const http = require('http');
-const url = require('url');
+const http = require("http");
+const url = require("url");
 
-let local = require('../local/local');
-const serialization = require('../util/serialization');
+let local = require("../local/local");
+const serialization = require("../util/serialization");
 
 /*
     The start function will be called to start your node.
@@ -11,28 +11,26 @@ const serialization = require('../util/serialization');
 */
 
 function isValidBody(body) {
-  error = undefined;
   if (body.length === 0) {
-    return new Error('No body');
+    return new Error("No body");
   }
 
   try {
-    body = JSON.parse(body);
+    JSON.parse(body);
+    return false;
   } catch (error) {
     return error;
   }
-
-  return error;
 }
 
-const start = function(onStart) {
+const start = function (onStart) {
   const server = http.createServer((req, res) => {
     /* Your server will be listening for PUT requests. */
 
     // Write some code...
 
-    if (req.method !== 'PUT') {
-      res.end(serialization.serialize(new Error('Method not allowed!')));
+    if (req.method !== "PUT") {
+      res.end(serialization.serialize(new Error("Method not allowed!")));
       return;
     }
 
@@ -44,7 +42,7 @@ const start = function(onStart) {
     // Write some code...
 
     const pathname = url.parse(req.url).pathname;
-    const [, service, method] = pathname.split('/');
+    const [, service, method] = pathname.split("/");
 
     console.log(`[SERVER] (${global.nodeConfig.ip}:${global.nodeConfig.port})
         Request: ${service}:${method}`);
@@ -68,43 +66,45 @@ const start = function(onStart) {
 
     let body = [];
 
-    req.on('data', (chunk) => {
+    req.on("data", (chunk) => {
       body.push(chunk);
     });
 
-    req.on('end', () => {
-      body = Buffer.concat(body).toString();
+    req.on("end", () => {
+      const stringBody = Buffer.concat(body).toString();
 
-      let error;
-
-      if ((error = isValidBody(body))) {
-        res.end(serialization.serialize(error));
+      const error = isValidBody(stringBody);
+      if (error) {
+        console.log("============================================", error);
+        console.error(stringBody);
+        console.log("============================================", error);
+        res.end(serialization.serialize([error, null]));
         return;
       }
 
-      body = serialization.deserialize(body);
+      const jsBody = serialization.deserialize(stringBody);
       /* Here, you can handle the service requests. */
 
       const serviceCallback = (e, v) => {
         res.end(serialization.serialize([e, v]));
       };
 
-      local.routes.get(service, (error, service) => {
+      local.routes.get(service, (error, ser) => {
         if (error) {
-          res.end(serialization.serialize(error));
+          res.end(serialization.serialize([error, null]));
           console.error(error);
           return;
         }
 
-        console.log(`[SERVER] Args: ${JSON.stringify(body)} 
+        console.log(`[SERVER] ${service}:${method} Args: ${JSON.stringify(jsBody)} 
             ServiceCallback: ${serviceCallback}`);
 
-        if (method in service) {
-          service[method](...body, serviceCallback);
+        if (method in ser) {
+          ser[method](...jsBody, serviceCallback);
         } else {
           return serviceCallback(
-              Error(`invalid method ${method} for ${service}`),
-              null,
+            Error(`invalid method ${method} for ${ser}`),
+            null,
           );
         }
       });
@@ -124,7 +124,7 @@ const start = function(onStart) {
 
   server.listen(global.nodeConfig.port, global.nodeConfig.ip, () => {
     console.log(
-        `Server running at http://${global.nodeConfig.ip}:${global.nodeConfig.port}/`,
+      `Server running at http://${global.nodeConfig.ip}:${global.nodeConfig.port}/`,
     );
     onStart(server);
   });

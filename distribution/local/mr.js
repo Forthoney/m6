@@ -5,12 +5,13 @@
 /** @typedef {import("../types").Reducer} Reducer */
 /** @typedef {import("../types").MapReduceJobMetadata} MRJobMetadata */
 
-const assert = require('node:assert');
-const store = require('./store');
-const comm = require('./comm');
-const groups = require('./groups');
-const id = require('../util/id');
-const util = require('../util/util');
+const assert = require("node:assert");
+const store = require("./store");
+const comm = require("./comm");
+const groups = require("./groups");
+const id = require("../util/id");
+const util = require("../util/util");
+const { writeFileSync } = require("node:fs");
 
 /**
  * @param {string} gid
@@ -21,25 +22,25 @@ const util = require('../util/util');
  * @param {Callback} callback
  */
 function storeOnRemote(
-    gid,
-    hashKey,
-    storeKey,
-    item,
-    neighborNIDNodeMap,
-    callback,
+  gid,
+  hashKey,
+  storeKey,
+  item,
+  neighborNIDNodeMap,
+  callback,
 ) {
   const neighborNIDs = Array.from(neighborNIDNodeMap.keys());
   const destinationNID = id.consistentHash(id.getID(hashKey), neighborNIDs);
   const destinationNode = neighborNIDNodeMap.get(destinationNID);
   assert(destinationNode);
   comm.send(
-      [item, {gid, key: storeKey}],
-      {
-        node: destinationNode,
-        service: 'store',
-        method: 'put',
-      },
-      (e, _) => (e ? callback(e) : callback(null, storeKey)),
+    [item, { gid, key: storeKey }],
+    {
+      node: destinationNode,
+      service: "store",
+      method: "put",
+    },
+    (e, _) => (e ? callback(e) : callback(null, storeKey)),
   );
 }
 
@@ -52,16 +53,14 @@ function storeOnRemote(
  * @return {Callback}
  */
 function notificationBarrier(jobData, numNotifs, callback) {
-  const {jobID, supervisor} = jobData;
+  const { jobID, supervisor } = jobData;
   const notifyRemote = {
     node: supervisor,
     service: `mr-${jobID}`,
-    method: 'call',
+    method: "call",
   };
   return util.waitAll(numNotifs, (e, _) => {
-    if (e) return callback(e);
-
-    comm.send([], notifyRemote, (err, _) => {
+    comm.send([e], notifyRemote, (err, _) => {
       if (err) {
         return callback(err);
       }
@@ -78,11 +77,11 @@ function notificationBarrier(jobData, numNotifs, callback) {
  * @return {Callback}
  */
 function storeBarrier(
-    jobData,
-    mapperRes,
-    numKeys,
-    neighborNIDNodeMap,
-    callback,
+  jobData,
+  mapperRes,
+  numKeys,
+  neighborNIDNodeMap,
+  callback,
 ) {
   return util.waitAll(numKeys, (e) => {
     if (e) return callback(e);
@@ -93,12 +92,12 @@ function storeBarrier(
       const [key, val] = entry;
       const uniqueKey = id.getID(entry) + id.getSID(global.nodeConfig);
       storeOnRemote(
-          jobData.jobID,
-          key,
-          uniqueKey,
-          {[key]: val},
-          neighborNIDNodeMap,
-          notif,
+        jobData.jobID,
+        key,
+        uniqueKey,
+        { [key]: val },
+        neighborNIDNodeMap,
+        notif,
       );
     });
   });
@@ -110,8 +109,8 @@ function storeBarrier(
  * @param {Callback} callback
  */
 function map(jobData, mapper, callback = () => {}) {
-  const {gid} = jobData;
-  store.get({gid: gid, key: null}, (e, keys) => {
+  const { gid } = jobData;
+  store.get({ gid: gid, key: null }, (e, keys) => {
     if (e) return callback(e);
 
     groups.get(gid, (e, neighbors) => {
@@ -119,19 +118,19 @@ function map(jobData, mapper, callback = () => {}) {
 
       assert(neighbors);
       const neighborNIDNodeMap = new Map(
-          Object.values(neighbors).map((node) => [id.getNID(node), node]),
+        Object.values(neighbors).map((node) => [id.getNID(node), node]),
       );
 
       const mapperRes = new Map();
       const storeBar = storeBarrier(
-          jobData,
-          mapperRes,
-          keys.length,
-          neighborNIDNodeMap,
-          callback,
+        jobData,
+        mapperRes,
+        keys.length,
+        neighborNIDNodeMap,
+        callback,
       );
       keys.forEach((/** @type {store.LocalKey} */ storeKey) => {
-        store.get({gid: gid, key: storeKey}, (e, data) => {
+        store.get({ gid: gid, key: storeKey }, (e, data) => {
           if (e) return storeBar(e);
 
           try {
@@ -171,13 +170,13 @@ function map(jobData, mapper, callback = () => {}) {
  * @param {Callback} callback
  */
 function reduce(jobData, reducer, callback = (_e, _) => {}) {
-  const {gid, jobID} = jobData;
+  const { gid, jobID } = jobData;
   groups.get(gid, (e, neighbors) => {
     if (e) return callback(e);
 
     assert(neighbors);
     const neighborNIDNodeMap = new Map(
-        Object.values(neighbors).map((node) => [id.getNID(node), node]),
+      Object.values(neighbors).map((node) => [id.getNID(node), node]),
     );
     store.getAll(jobID, (e, mapResults) => {
       if (e) return callback(e);
@@ -197,16 +196,16 @@ function reduce(jobData, reducer, callback = (_e, _) => {}) {
 
       try {
         const reduceResult = Object.entries(organizedMapResults).map(
-            ([key, val]) => reducer(key, val),
+          ([key, val]) => reducer(key, val),
         );
         const key = jobID + id.getSID(global.nodeConfig);
         storeOnRemote(
-            gid,
-            key,
-            key,
-            reduceResult,
-            neighborNIDNodeMap,
-            callback,
+          gid,
+          key,
+          key,
+          reduceResult,
+          neighborNIDNodeMap,
+          callback,
         );
       } catch (e) {
         return callback(e);
@@ -215,4 +214,4 @@ function reduce(jobData, reducer, callback = (_e, _) => {}) {
   });
 }
 
-module.exports = {map, reduce};
+module.exports = { map, reduce };

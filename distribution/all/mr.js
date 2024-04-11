@@ -3,13 +3,13 @@
 /** @typedef {import("../types").Callback} Callback*/
 /** @typedef {import("../types").MapReduceJobMetadata} MRJobMetadata */
 
-const assert = require('node:assert');
-const local = require('../local/local');
-const util = require('../util/util');
-const {toAsync, createRPC} = require('../util/wire');
-const id = require('../util/id');
-const comm = require('./comm');
-const store = require('./store');
+const assert = require("node:assert");
+const local = require("../local/local");
+const util = require("../util/util");
+const { toAsync, createRPC } = require("../util/wire");
+const id = require("../util/id");
+const comm = require("./comm");
+const store = require("./store");
 
 /**
  * @param {object} config
@@ -17,7 +17,7 @@ const store = require('./store');
  */
 function mr(config) {
   const context = {
-    gid: config.gid || 'all',
+    gid: config.gid || "all",
   };
 
   /**
@@ -32,15 +32,20 @@ function mr(config) {
    */
   function setupNotifyEndpoint(jobData, numNotify, reducer, callback) {
     let completed = 0;
-    const notify = () => {
+    const errors = [];
+    const notify = (err) => {
+      if (err) {
+        errors.push(err);
+      }
+
       if (++completed == numNotify) {
         comm(config).send(
-            [jobData, reducer],
-            {
-              service: 'mr',
-              method: 'reduce',
-            },
-            resultCompiler(jobData, callback),
+          [jobData, reducer],
+          {
+            service: "mr",
+            method: "reduce",
+          },
+          resultCompiler(jobData, callback),
         );
       }
     };
@@ -58,8 +63,8 @@ function mr(config) {
         if (e) return callback(e);
 
         const mergedResults = vals
-            .flat()
-            .filter((v) => Object.keys(v).length > 0);
+          .flat()
+          .filter((v) => Object.keys(v).length > 0);
         console.log(mergedResults);
 
         // Cleanup data
@@ -84,7 +89,7 @@ function mr(config) {
    */
   function exec(setting, callback = () => {}) {
     if (setting.map == null || setting.reduce == null) {
-      return callback(Error('Did not supply mapper or reducer'), null);
+      return callback(Error("Did not supply mapper or reducer"), null);
     }
     local.groups.get(context.gid, (e, group) => {
       if (e) return callback(e, {});
@@ -100,13 +105,13 @@ function mr(config) {
       setupNotifyEndpoint(jobData, nodes.length, setting.reduce, callback);
 
       comm(config).send([jobData, setting.map], {
-        service: 'mr',
-        method: 'map',
+        service: "mr",
+        method: "map",
       });
     });
   }
 
-  return {exec};
+  return { exec };
 }
 
 module.exports = mr;
