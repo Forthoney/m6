@@ -31,4 +31,12 @@
  * @typedef {Object.<string, NodeInfo>} Group
  */
 
+/**
+ * @typedef {object} MapReduceJobMetadata
+ * @property {string} gid
+ * @property {NodeInfo} supervisor
+ * @property {string} jobID
+ * @property {string} hash
+ */
+
 module.exports = {};

@@ -1,9 +1,9 @@
 // @ts-check
 /** @typedef {import("../types").Callback} Callback */
 
-const serialization = require('./serialization');
-const id = require('./id');
-const wire = require('./wire');
+const serialization = require("./serialization");
+const id = require("./id");
+const wire = require("./wire");
 
 /**
  * Returns a function with an internal counter. The returned function will
@@ -22,15 +22,16 @@ function waitAll(n, callback) {
 
   let counter = 0;
   let failed = false;
-  function barrier(e, _) {
+  const results = [];
+  function barrier(e, v) {
     if (failed) return;
     if (e) {
       failed = true;
       return callback(e);
     }
-
+    results.push(v);
     if (++counter === n) {
-      callback(null, null);
+      callback(null, results);
     }
   }
 

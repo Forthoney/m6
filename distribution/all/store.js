@@ -2,11 +2,13 @@
 /** @typedef {import("../types").NodeInfo} NodeInfo */
 /** @typedef {import("../types").Group} Group */
 /** @typedef {import("../types").Callback} Callback */
+/** @typedef {import("../local/store").LocalKey} LocalKey} */
+/** @typedef {import("../local/store").GroupKey} GroupKey} */
 
-const assert = require('node:assert');
-const id = require('../util/id');
-const local = require('../local/local');
-const comm = require('./comm');
+const assert = require("node:assert");
+const id = require("../util/id");
+const local = require("../local/local");
+const comm = require("./comm");
 
 /**
  * @param {object} config
@@ -20,8 +22,8 @@ function store(config) {
    * @property {id.HashFunc} hash
    */
   const context = {
-    gid: config.gid || 'all',
-    hash: config.hash || id.naiveHash,
+    gid: config.gid || "all",
+    hash: config.hash || id.consistentHash,
   };
 
   /**
@@ -31,11 +33,11 @@ function store(config) {
    */
   function groupToDestinationNode(group, key) {
     const nidToNodeMap = new Map(
-        Object.values(group).map((node) => [id.getNID(node), node]),
+      Object.values(group).map((node) => [id.getNID(node), node]),
     );
     const destinationNID = context.hash(
-        id.getID(key),
-        Array.from(nidToNodeMap.keys()),
+      id.getID(key),
+      Array.from(nidToNodeMap.keys()),
     );
 
     const result = nidToNodeMap.get(destinationNID);
@@ -44,32 +46,35 @@ function store(config) {
   }
 
   /**
-   * @param {?string} key
+   * @param {?LocalKey} key
    * @param {Callback} callback
    * @return {void}
    */
-  function get(key, callback = (_e, _) => {}) {
-    const query = {key: key, gid: context.gid};
+  function get(key, callback = () => {}) {
+    const query = { key: key, gid: context.gid };
     if (key === null) {
       comm(config).send(
-          [query],
-          {service: 'store', method: 'get'},
-          (e, v) => {
-            if (Object.values(e).length !== 0) return callback(e, {});
+        [query],
+        { service: "store", method: "get" },
+        (e, v) => {
+          if (Object.values(e).length !== 0) return callback(e, {});
 
-            const found = Object.values(v).flat();
-            callback(e, found);
-          },
+          const found = Object.values(v).flat();
+          callback(e, found);
+        },
       );
     } else {
       local.groups.get(context.gid, (e, group) => {
-        if (e) return callback(e, {});
+        if (e) {
+          return callback(e, {});
+        }
 
         assert(group);
+        const destination = groupToDestinationNode(group, key);
         const remote = {
-          service: 'store',
-          method: 'get',
-          node: groupToDestinationNode(group, key),
+          service: "store",
+          method: "get",
+          node: destination,
         };
         local.comm.send([query], remote, callback);
       });
@@ -78,7 +83,7 @@ function store(config) {
 
   /**
    * @param {any} val
-   * @param {?string} key
+   * @param {?LocalKey} key
    * @param {Callback} callback
    * @return {void}
    */
@@ -88,11 +93,11 @@ function store(config) {
 
       assert(group);
       const remote = {
-        service: 'store',
-        method: 'put',
+        service: "store",
+        method: "put",
         node: groupToDestinationNode(group, key || id.getID(val)),
       };
-      local.comm.send([val, {key: key, gid: context.gid}], remote, callback);
+      local.comm.send([val, { key: key, gid: context.gid }], remote, callback);
     });
   }
 
@@ -107,11 +112,11 @@ function store(config) {
 
       assert(group);
       const remote = {
-        service: 'store',
-        method: 'del',
+        service: "store",
+        method: "del",
         node: groupToDestinationNode(group, key),
       };
-      local.comm.send([{key: key, gid: context.gid}], remote, callback);
+      local.comm.send([{ key: key, gid: context.gid }], remote, callback);
     });
   }
 
@@ -122,13 +127,13 @@ function store(config) {
    */
   function delGroup(gid, callback = () => {}) {
     comm(config).send(
-        [gid],
-        {service: 'store', method: 'delGroup'},
-        callback,
+      [gid],
+      { service: "store", method: "delGroup" },
+      callback,
     );
   }
 
-  return {get, put, del, delGroup};
+  return { get, put, del, delGroup };
 }
 
 module.exports = store;
