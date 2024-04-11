@@ -1,9 +1,9 @@
 // @ts-check
 /** @typedef {import("../types").Callback} Callback */
 
-const serialization = require("./serialization");
-const id = require("./id");
-const wire = require("./wire");
+const serialization = require('./serialization');
+const id = require('./id');
+const wire = require('./wire');
 
 /**
  * Returns a function with an internal counter. The returned function will

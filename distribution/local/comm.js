@@ -2,8 +2,8 @@
 /** @typedef {import("../types").Callback} Callback */
 /** @typedef {import("../types").NodeInfo} NodeInfo */
 
-const http = require("http");
-const serialization = require("../util/serialization");
+const http = require('http');
+const serialization = require('../util/serialization');
 
 /**
  * @typedef {Object} LocalRemote
@@ -24,24 +24,24 @@ function send(message, remote, callback = () => {}) {
     hostname: remote.node.ip,
     port: remote.node.port,
     path: `/${remote.service}/${remote.method}`,
-    method: "PUT",
+    method: 'PUT',
     headers: {
-      "content-type": "application/json",
-      "content-length": msg.length,
+      'content-type': 'application/json',
+      'content-length': msg.length,
     },
   };
   const req = http.request(options, (res) => {
-    let body = "";
-    res.on("data", (chunk) => {
+    let body = '';
+    res.on('data', (chunk) => {
       body += chunk;
     });
-    res.on("end", () => {
+    res.on('end', () => {
       const [err, content] = serialization.deserialize(body);
       callback(err, content);
     });
   });
 
-  req.on("error", (e) => {
+  req.on('error', (e) => {
     callback(new Error(`Error on Request: ${e.message}`), null);
   });
 
@@ -49,4 +49,4 @@ function send(message, remote, callback = () => {}) {
   req.end();
 }
 
-module.exports = { send };
+module.exports = {send};
