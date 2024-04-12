@@ -3,9 +3,8 @@
 
 const assert = require("node:assert");
 const local = require("../local/local");
-const { getSID } = require("../util/id");
+const util = require("../util/util");
 const { promisify } = require("node:util");
-const { writeFileSync } = require("node:fs");
 
 /**
  * @typedef {Object} AllRemote
@@ -56,6 +55,8 @@ function comm(config) {
       });
     });
   }
+
+  send[promisify.custom] = util.groupPromisify(send);
 
   return { send, sendPromise: promisify(send) };
 }

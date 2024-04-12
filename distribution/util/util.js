@@ -4,6 +4,7 @@
 const serialization = require("./serialization");
 const id = require("./id");
 const wire = require("./wire");
+const { wrap } = require("yargs");
 
 /**
  * Returns a function with an internal counter. The returned function will
@@ -38,10 +39,25 @@ function waitAll(n, callback) {
   return barrier;
 }
 
+function groupPromisify(func) {
+  return (/** @type {any} */ ...args) => {
+    return new Promise((resolve, reject) => {
+      func(...args, (e, v) => {
+        if (Object.keys(e).length !== 0) {
+          reject(e);
+        } else {
+          resolve(v);
+        }
+      });
+    });
+  };
+}
+
 module.exports = {
   serialize: serialization.serialize,
   deserialize: serialization.deserialize,
   id,
   wire,
   waitAll,
+  groupPromisify,
 };

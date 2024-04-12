@@ -39,47 +39,38 @@ function mr(config) {
       }
 
       if (++completed == numNotify) {
-        comm(config).send(
-          [jobData, reducer],
-          {
+        comm(config)
+          .sendPromise([jobData, reducer], {
             service: "mr",
             method: "reduce",
-          },
-          resultCompiler(jobData, callback),
-        );
+          })
+          .then((results) => {
+            const keys = Object.values(results);
+            const promises = keys.map((storeID) =>
+              store(config).getPromise(storeID),
+            );
+
+            Promise.all(promises)
+              .then((vals) => {
+                const mergeResults = vals
+                  .flat()
+                  .filter((v) => Object.keys(v).length > 0);
+
+                store(config)
+                  .delGroupPromise(jobData.jobID)
+                  .then(() => callback(null, mergeResults))
+                  .catch((e) => {
+                    console.error("ERROR:", e);
+                    callback(e);
+                  });
+              })
+              .catch((e) => callback(e));
+          })
+          .catch((e) => callback(e));
       }
     };
     createRPC(toAsync(notify), `mr-${jobData.jobID}`);
     return;
-  }
-
-  function resultCompiler(jobData, callback) {
-    return (e, results) => {
-      if (Object.values(e).length !== 0) {
-        return callback(e);
-      }
-      const keys = Object.values(results);
-      const mergeBarrier = util.waitAll(keys.length, (e, vals) => {
-        if (e) return callback(e);
-
-        const mergedResults = vals
-          .flat()
-          .filter((v) => Object.keys(v).length > 0);
-        console.log(mergedResults);
-
-        // Cleanup data
-        store(config).delGroup(jobData.jobID, (e, _) => {
-          if (Object.values(e).length !== 0) {
-            return callback(e);
-          }
-          return callback(e, mergedResults);
-        });
-      });
-
-      keys.forEach((storeID) => {
-        store(config).get(storeID, mergeBarrier);
-      });
-    };
   }
 
   /**
@@ -91,24 +82,25 @@ function mr(config) {
     if (setting.map == null || setting.reduce == null) {
       return callback(Error("Did not supply mapper or reducer"), null);
     }
-    local.groups.get(context.gid, (e, group) => {
-      if (e) return callback(e, {});
+    local.groups
+      .getPromise(context.gid)
+      .then((group) => {
+        const jobID = setting.id || id.getID(setting);
+        assert(group);
+        const nodes = Object.values(group);
+        const jobData = {
+          gid: context.gid,
+          supervisor: global.nodeConfig,
+          jobID: jobID,
+        };
+        setupNotifyEndpoint(jobData, nodes.length, setting.reduce, callback);
 
-      const jobID = setting.id || id.getID(setting);
-      assert(group);
-      const nodes = Object.values(group);
-      const jobData = {
-        gid: context.gid,
-        supervisor: global.nodeConfig,
-        jobID: jobID,
-      };
-      setupNotifyEndpoint(jobData, nodes.length, setting.reduce, callback);
-
-      comm(config).send([jobData, setting.map], {
-        service: "mr",
-        method: "map",
-      });
-    });
+        comm(config).send([jobData, setting.map], {
+          service: "mr",
+          method: "map",
+        });
+      })
+      .catch((e) => callback(e, {}));
   }
 
   return { exec };
