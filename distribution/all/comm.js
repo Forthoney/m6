@@ -1,9 +1,11 @@
 // @ts-check
 /** @typedef {import("../types").Callback} Callback */
 
-const assert = require('node:assert');
-const local = require('../local/local');
-const {getSID} = require('../util/id');
+const assert = require("node:assert");
+const local = require("../local/local");
+const { getSID } = require("../util/id");
+const { promisify } = require("node:util");
+const { writeFileSync } = require("node:fs");
 
 /**
  * @typedef {Object} AllRemote
@@ -17,46 +19,45 @@ const {getSID} = require('../util/id');
  */
 function comm(config) {
   const context = {
-    gid: config.gid || 'all',
+    gid: config.gid || "all",
   };
-  const mySid = getSID(global.nodeConfig);
 
   /**
    * @param {Array} message
    * @param {object} remote
    * @param {Callback} callback
    */
-  function send(message, remote, callback = (_e, _) => {}) {
-    local.groups.get(context.gid, (e, group) => {
-      if (e) {
-        const err = {};
-        err[mySid] = e;
-        return callback(e, null);
-      }
-
-      const errors = {};
-      const results = {};
-      let count = 0;
+  function send(message, remote, callback = () => {}) {
+    local.groups.getPromise(context.gid).then((group) => {
       assert(group);
       const entries = Object.entries(group);
+      const promises = entries.map(([sid, node]) => {
+        Object.assign(remote, { node: node });
+        return local.comm
+          .sendPromise(message, remote)
+          .then((value) => ({ sid, value }))
+          .catch((error) => Promise.reject({ sid, error }));
+      });
 
-      entries.forEach(([sid, node]) => {
-        Object.assign(remote, {node: node});
-        local.comm.send(message, remote, (e, v) => {
-          if (e) {
-            errors[sid] = e;
+      Promise.allSettled(promises).then((results) => {
+        const allError = {};
+        const allSuccess = {};
+
+        results.forEach((result) => {
+          if (result.status === "fulfilled") {
+            allSuccess[result.value.sid] = result.value.value;
+          } else if (result.status === "rejected") {
+            allError[result.reason.sid] = result.reason.error;
           } else {
-            results[sid] = v;
-          }
-          if (++count === entries.length) {
-            callback(errors, results);
+            console.error(results);
           }
         });
+        callback(allError, allSuccess);
       });
     });
   }
 
-  return {send};
+  return { send, sendPromise: promisify(send) };
 }
 
 module.exports = comm;

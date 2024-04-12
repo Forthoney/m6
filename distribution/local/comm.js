@@ -2,7 +2,8 @@
 /** @typedef {import("../types").Callback} Callback */
 /** @typedef {import("../types").NodeInfo} NodeInfo */
 
-const http = require("http");
+const http = require("node:http");
+const { promisify } = require("node:util");
 const serialization = require("../util/serialization");
 
 /**
@@ -27,7 +28,6 @@ function send(message, remote, callback = () => {}) {
     method: "PUT",
     headers: {
       "content-type": "application/json",
-      //      "content-length": msg.length,
     },
   };
   const req = http.request(options, (res) => {
@@ -52,4 +52,4 @@ function send(message, remote, callback = () => {}) {
   req.end();
 }
 
-module.exports = { send };
+module.exports = { send, sendPromise: promisify(send) };

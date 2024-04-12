@@ -2,7 +2,8 @@
 /** @typedef {import("../types").Group} Group */
 /** @typedef {import("../types").NodeInfo} NodeInfo */
 
-const id = require('../util/id');
+const { promisify } = require("node:util");
+const id = require("../util/id");
 
 /** @type {Map.<string, Group>} */
 const groupMap = new Map();
@@ -20,11 +21,11 @@ const groupMap = new Map();
  * @return {void}
  */
 function put(config, group, callback = (_e, _) => {}) {
-  if (typeof group !== 'object') {
-    return callback(Error('Invalid group structure'));
+  if (typeof group !== "object") {
+    return callback(Error("Invalid group structure"));
   }
 
-  config = typeof config === 'string' ? {gid: config} : config;
+  config = typeof config === "string" ? { gid: config } : config;
   groupMap.set(config.gid, group);
 
   callback(null, group);
@@ -88,4 +89,15 @@ function rem(name, sid, callback = () => {}) {
   }
 }
 
-module.exports = {put, get, add, del, rem};
+module.exports = {
+  put,
+  get,
+  add,
+  del,
+  rem,
+  putPromise: promisify(put),
+  getPromise: promisify(get),
+  addPromise: promisify(add),
+  delPromise: promisify(del),
+  remPromise: promisify(rem),
+};
