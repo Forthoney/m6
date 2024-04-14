@@ -8,7 +8,6 @@
 const assert = require("node:assert");
 const id = require("../util/id");
 const local = require("../local/local");
-const comm = require("./comm");
 
 /**
  * @param {object} config
