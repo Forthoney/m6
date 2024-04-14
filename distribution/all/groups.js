@@ -49,7 +49,8 @@ function groups(config) {
   function put(newConfig, group, callback = () => {}) {
     newConfig = typeof newConfig === "string" ? { gid: newConfig } : newConfig;
 
-    global.distribution[newConfig.gid] = {
+    global.distribution[newConfig.gid] = {};
+    Object.assign(global.distribution[newConfig.gid], {
       status: require("./status")(newConfig),
       comm: require("./comm")(newConfig),
       groups: require("./groups")(newConfig),
@@ -58,7 +59,7 @@ function groups(config) {
       mem: require("./mem")(newConfig),
       store: require("./store")(newConfig),
       mr: require("./mr")(newConfig),
-    };
+    });
     local.groups.put(newConfig, group, (e, newGroup) => {
       const err = {};
       if (e) {
