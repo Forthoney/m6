@@ -1,15 +1,15 @@
 const id = require("../util/id");
-const comm = require("./comm");
 const local = require("../local/local");
 
-const gossip = (config) => {
+const mySid = id.getSID(global.nodeConfig);
+
+function gossip(config) {
   const context = {
     gid: config.gid || "all",
   };
 
   const distService = global.distribution[context.gid];
 
-  const mySid = id.getSID(global.nodeConfig);
   let gossipCounter = 0;
 
   return {
@@ -63,6 +63,6 @@ const gossip = (config) => {
       });
     },
   };
-};
+}
 
 module.exports = gossip;
