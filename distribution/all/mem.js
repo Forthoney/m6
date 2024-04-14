@@ -20,67 +20,62 @@ function mem(config) {
     return nidToNodeMap[destinationNID];
   }
 
-  return {
-    get: (key, callback = () => {}) => {
-      const query = { key: key, gid: context.gid };
-      if (key === null) {
-        distService.comm.send(
-          [query],
-          { service: "mem", method: "get" },
-          (e, v) => {
-            if (Object.values(e).length !== 0) return callback(e, {});
+  function get(key, callback = () => {}) {
+    const query = { key: key, gid: context.gid };
+    if (key === null) {
+      distService.comm.send(
+        [query],
+        { service: "mem", method: "get" },
+        (e, v) => {
+          if (Object.values(e).length !== 0) return callback(e, {});
 
-            const found = Object.values(v).reduce(
-              (acc, val) => acc.concat(val),
-              [],
-            );
-            callback(e, found);
-          },
-        );
-      } else {
-        local.groups.get(context.gid, (e, group) => {
-          if (e) return callback(e, {});
-
-          const remote = {
-            service: "mem",
-            method: "get",
-            node: groupToDestinationNode(group, key),
-          };
-          local.comm.send([query], remote, callback);
-        });
-      }
-    },
-
-    put: (val, key, callback = () => {}) => {
+          const found = Object.values(v).reduce(
+            (acc, val) => acc.concat(val),
+            [],
+          );
+          callback(e, found);
+        },
+      );
+    } else {
       local.groups.get(context.gid, (e, group) => {
-        if (e) return callback(e, null);
+        if (e) return callback(e, {});
 
         const remote = {
           service: "mem",
-          method: "put",
-          node: groupToDestinationNode(group, key || id.getID(val)),
-        };
-        local.comm.send(
-          [val, { key: key, gid: context.gid }],
-          remote,
-          callback,
-        );
-      });
-    },
-
-    del: (key, callback = () => {}) => {
-      local.groups.get(context.gid, (e, group) => {
-        if (e) return callback(e, null);
-
-        const remote = {
-          service: "mem",
-          method: "del",
+          method: "get",
           node: groupToDestinationNode(group, key),
         };
-        local.comm.send([{ key: key, gid: context.gid }], remote, callback);
+        local.comm.send([query], remote, callback);
       });
-    },
-  };
+    }
+  }
+  function put(val, key, callback = () => {}) {
+    local.groups.get(context.gid, (e, group) => {
+      if (e) return callback(e, null);
+
+      const remote = {
+        service: "mem",
+        method: "put",
+        node: groupToDestinationNode(group, key || id.getID(val)),
+      };
+      local.comm.send([val, { key: key, gid: context.gid }], remote, callback);
+    });
+  }
+
+  function del(key, callback = () => {}) {
+    local.groups.get(context.gid, (e, group) => {
+      if (e) return callback(e, null);
+
+      const remote = {
+        service: "mem",
+        method: "del",
+        node: groupToDestinationNode(group, key),
+      };
+      local.comm.send([{ key: key, gid: context.gid }], remote, callback);
+    });
+  }
+
+  return { get, put, del };
 }
 
 module.exports = mem;
