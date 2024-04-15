@@ -10,6 +10,8 @@ const serialization = require("../util/serialization");
     After your node has booted, you should call the callback.
 */
 
+const nodeConfig = global.nodeConfig;
+
 function isValidBody(body) {
   if (body.length === 0) {
     return new Error("No body");
@@ -44,7 +46,7 @@ const start = function (onStart) {
     const pathname = url.parse(req.url).pathname;
     const [, service, method] = pathname.split("/");
 
-    console.log(`[SERVER] (${global.nodeConfig.ip}:${global.nodeConfig.port})
+    console.log(`[SERVER] (${nodeConfig.ip}:${nodeConfig.port})
         Request: ${service}:${method}`);
 
     /*
@@ -75,9 +77,6 @@ const start = function (onStart) {
 
       const error = isValidBody(stringBody);
       if (error) {
-        console.log("============================================", error);
-        console.error(stringBody);
-        console.log("============================================", error);
         res.end(serialization.serialize([error, null]));
         return;
       }
@@ -122,10 +121,13 @@ const start = function (onStart) {
     remotely through the service interface.
   */
 
-  server.listen(global.nodeConfig.port, global.nodeConfig.ip, () => {
+  server.listen(nodeConfig.port, nodeConfig.ip, () => {
     console.log(
-      `Server running at http://${global.nodeConfig.ip}:${global.nodeConfig.port}/`,
+      `Server running at http://${nodeConfig.ip}:${nodeConfig.port}/`,
     );
+    if (process.send !== undefined) {
+      process.send("spawned node running");
+    }
     onStart(server);
   });
 };

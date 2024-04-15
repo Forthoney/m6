@@ -45,7 +45,11 @@ function send(message, remote, callback = () => {}) {
   });
 
   req.on("error", (e) => {
-    callback(new Error(`Error on Request: ${e.message}`), null);
+    callback(
+      new Error(
+        `${e.message}: sending ${message} to ${remote.node.ip}:${remote.node.port}`,
+      ),
+    );
   });
 
   req.write(msg);
