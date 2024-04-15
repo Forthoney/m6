@@ -192,7 +192,7 @@ function parseWrapper(item) {
     case "undefined":
       return undefined;
     case "function":
-      return new Function(`return ${item.value}`)();
+      return new Function("require", `return ${item.value}`)(require);
     case "builtin":
       return GLOBAL_INDEX.getFromId(JSON.parse(item.value));
     case "Date":

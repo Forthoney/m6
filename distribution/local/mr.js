@@ -12,6 +12,7 @@ const groups = require("./groups");
 const id = require("../util/id");
 const util = require("../util/util");
 const { writeFileSync } = require("node:fs");
+const { promisify } = require("node:util");
 
 /**
  * @param {string} gid
@@ -129,6 +130,7 @@ function map(jobData, mapper, callback = () => {}) {
         neighborNIDNodeMap,
         callback,
       );
+
       keys.forEach((/** @type {store.LocalKey} */ storeKey) => {
         store.get({ gid: gid, key: storeKey }, (e, data) => {
           if (e) return storeBar(e);
@@ -160,6 +162,86 @@ function map(jobData, mapper, callback = () => {}) {
           storeBar(null);
         });
       });
+    });
+  });
+}
+
+/**
+ * @param {MRJobMetadata} jobData
+ * @param {Mapper} mapper
+ * @param {Callback} callback
+ */
+function mapPromise(jobData, mapper, callback = () => {}) {
+  const { gid } = jobData;
+  const storeGetPromise = promisify(store.get);
+  storeGetPromise({ gid: gid, key: null }).then((keys) => {
+    groups.getPromise(gid).then((neighbors) => {
+      assert(neighbors);
+      const neighborNIDNodeMap = new Map(
+        Object.values(neighbors).map((node) => [id.getNID(node), node]),
+      );
+      const mapTasks = keys.map((key) => {
+        storeGetPromise({ gid, key })
+          .then((data) => mapper(key, data))
+          .then((result) => (result instanceof Array ? result : [result]));
+      });
+      Promise.all(mapTasks).then((results) => {
+        const mapperRes = new Map();
+        results = results.flat();
+        results.forEach((res) => {
+          Object.entries(res).forEach(([key, val]) => {
+            if (mapperRes.has(key)) {
+              mapperRes.get(key).push(val);
+            } else {
+              mapperRes.set(key, [val]);
+            }
+          });
+        });
+        const entries = Array;
+        return mapperRes;
+      });
+    });
+  });
+  store.get({ gid: gid, key: null }, (e, keys) => {
+    if (e) return callback(e);
+
+    groups.get(gid, (e, neighbors) => {
+      if (e) return callback(e);
+
+      assert(neighbors);
+      const neighborNIDNodeMap = new Map(
+        Object.values(neighbors).map((node) => [id.getNID(node), node]),
+      );
+
+      const mapperRes = new Map();
+      const storeBar = storeBarrier(
+        jobData,
+        mapperRes,
+        keys.length,
+        neighborNIDNodeMap,
+        callback,
+      );
+
+      const mapTasks = keys.map((storeKey) => {
+        storeGetPromise({ gid, key: storeKey })
+          .then((data) => mapper(storeKey, data))
+          .then((result) => {
+            result = result instanceof Array ? result : [result];
+            result.forEach((res) => {
+              Object.entries(res).forEach(([key, val]) => {
+                if (mapperRes.has(key)) {
+                  mapperRes.get(key).push(val);
+                } else {
+                  mapperRes.set(key, [val]);
+                }
+              });
+            });
+          });
+      });
+
+      Promise.all(mapTasks)
+        .then((_) => storeBar(null))
+        .catch((e) => storeBar(e));
     });
   });
 }
@@ -214,4 +296,4 @@ function reduce(jobData, reducer, callback = (_e, _) => {}) {
   });
 }
 
-module.exports = { map, reduce };
+module.exports = { map, reduce, mapPromise };
