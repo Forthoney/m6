@@ -6,8 +6,9 @@
 /** @typedef {import("../local/store").GroupKey} GroupKey} */
 
 const assert = require("node:assert");
-const id = require("../util/id");
+const { id, groupPromisify } = require("../util/util");
 const local = require("../local/local");
+const { promisify } = require("node:util");
 
 /**
  * @param {object} config
@@ -134,7 +135,29 @@ function store(config) {
     );
   }
 
-  return { get, put, del, delGroup };
+  get[promisify.custom] = (key) => {
+    // (key === null) ? groupPromisify(get) : promisify(get)
+    if (key === null) {
+      return new Promise((resolve, reject) => {
+        get(key, (e, v) =>
+          Object.values(e).length !== 0 ? reject(e) : resolve(v),
+        );
+      });
+    } else {
+      return new Promise((resolve, reject) => {
+        get(key, (e, v) => (e ? reject(e) : resolve(v)));
+      });
+    }
+  };
+
+  delGroup[promisify.custom] = groupPromisify(delGroup);
+
+  const baseMethods = { get, put, del, delGroup };
+  Object.entries(baseMethods).forEach(([method, fn]) => {
+    baseMethods[`${method}Promise`] = promisify(fn);
+  });
+
+  return baseMethods;
 }
 
 module.exports = store;
