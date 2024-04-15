@@ -136,7 +136,13 @@ function store(config) {
   }
 
   get[promisify.custom] = (key) => {
-    key === null ? groupPromisify(get)(key) : promisify(get)(key);
+    if (key === null) {
+      return groupPromisify(get)(key);
+    } else {
+      return new Promise((resolve, reject) => {
+        get(key, (e, v) => (e ? reject(e) : resolve(v)));
+      });
+    }
   };
 
   delGroup[promisify.custom] = groupPromisify(delGroup);
