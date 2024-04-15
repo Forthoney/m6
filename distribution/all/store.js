@@ -136,28 +136,19 @@ function store(config) {
   }
 
   get[promisify.custom] = (key) => {
-    // (key === null) ? groupPromisify(get) : promisify(get)
-    if (key === null) {
-      return new Promise((resolve, reject) => {
-        get(key, (e, v) =>
-          Object.values(e).length !== 0 ? reject(e) : resolve(v),
-        );
-      });
-    } else {
-      return new Promise((resolve, reject) => {
-        get(key, (e, v) => (e ? reject(e) : resolve(v)));
-      });
-    }
+    key === null ? groupPromisify(get)(key) : promisify(get)(key);
   };
 
   delGroup[promisify.custom] = groupPromisify(delGroup);
 
-  const baseMethods = { get, put, del, delGroup };
-  Object.entries(baseMethods).forEach(([method, fn]) => {
-    baseMethods[`${method}Promise`] = promisify(fn);
-  });
-
-  return baseMethods;
+  return {
+    get,
+    put,
+    del,
+    delGroup,
+    getPromise: promisify(get),
+    delGroupPromise: promisify(delGroup),
+  };
 }
 
 module.exports = store;
