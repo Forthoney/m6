@@ -5,11 +5,8 @@
 
 const assert = require("node:assert");
 const local = require("../local/local");
-const util = require("../util/util");
 const { toAsync, createRPC } = require("../util/wire");
 const id = require("../util/id");
-const comm = require("./comm");
-const store = require("./store");
 
 /**
  * @param {object} config
@@ -19,6 +16,8 @@ function mr(config) {
   const context = {
     gid: config.gid || "all",
   };
+
+  const distService = global.distribution[context.gid];
 
   /**
    * Setup an notification endpoint. When workers are done mapping, they will
@@ -39,7 +38,7 @@ function mr(config) {
       }
 
       if (++completed == numNotify) {
-        comm(config)
+        distService.comm
           .sendPromise([jobData, reducer], {
             service: "mr",
             method: "reduce",
@@ -47,7 +46,7 @@ function mr(config) {
           .then((results) => {
             const keys = Object.values(results);
             const promises = keys.map((storeID) =>
-              store(config).getPromise(storeID),
+              distService.store.getPromise(storeID),
             );
 
             Promise.all(promises)
@@ -56,13 +55,11 @@ function mr(config) {
                   .flat()
                   .filter((v) => Object.keys(v).length > 0);
 
-                store(config)
+                console.error(mergeResults);
+                distService.store
                   .delGroupPromise(jobData.jobID)
-                  .then(() => callback(null, mergeResults))
-                  .catch((e) => {
-                    console.error("ERROR:", e);
-                    callback(e);
-                  });
+                  .then(() => callback({}, mergeResults))
+                  .catch((e) => callback(e));
               })
               .catch((e) => callback(e));
           })
@@ -95,7 +92,7 @@ function mr(config) {
         };
         setupNotifyEndpoint(jobData, nodes.length, setting.reduce, callback);
 
-        comm(config).send([jobData, setting.map], {
+        distService.comm.send([jobData, setting.map], {
           service: "mr",
           method: "map",
         });

@@ -6,8 +6,9 @@
 /** @typedef {import("../local/store").GroupKey} GroupKey} */
 
 const assert = require("node:assert");
-const id = require("../util/id");
+const { id, groupPromisify } = require("../util/util");
 const local = require("../local/local");
+const { promisify } = require("node:util");
 
 /**
  * @param {object} config
@@ -134,7 +135,26 @@ function store(config) {
     );
   }
 
-  return { get, put, del, delGroup };
+  get[promisify.custom] = (key) => {
+    if (key === null) {
+      return groupPromisify(get)(key);
+    } else {
+      return new Promise((resolve, reject) => {
+        get(key, (e, v) => (e ? reject(e) : resolve(v)));
+      });
+    }
+  };
+
+  delGroup[promisify.custom] = groupPromisify(delGroup);
+
+  return {
+    get,
+    put,
+    del,
+    delGroup,
+    getPromise: promisify(get),
+    delGroupPromise: promisify(delGroup),
+  };
 }
 
 module.exports = store;

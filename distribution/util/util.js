@@ -43,11 +43,7 @@ function groupPromisify(func) {
   return (/** @type {any} */ ...args) => {
     return new Promise((resolve, reject) => {
       func(...args, (e, v) => {
-        if (Object.keys(e).length !== 0) {
-          reject(e);
-        } else {
-          resolve(v);
-        }
+        Object.keys(e).length !== 0 ? reject(e) : resolve(v);
       });
     });
   };
