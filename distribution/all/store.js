@@ -122,6 +122,91 @@ function store(config) {
     });
   }
 
+  function reconf(oldConfig, callback = () => {}) {
+    console.log('oldConfig', oldConfig);
+
+    // Step 1. Get current group config.
+    distService.groups.get(context.gid, (e, v) => {
+      let keys = Object.keys(v);
+      firstKey = keys[0] || null;
+      if (firstKey != null) {
+        currentConfig = v[firstKey];
+      }
+
+      // Step 2. Get all keys in current group.
+      distService.store.get(null, (err, allKeys) => {
+        allKeys = [...new Set(allKeys)];
+
+        // Step 3: Identify which objects need to be relocated.
+        let relocationTasks = [];
+        allKeys.forEach((key) => {
+          let kid = id.getID(key);
+
+          // Use both old and new groups to hash the kid
+          // and determine its target node.
+          let oldNids = Object.values(oldConfig).map((node) =>
+            id.getNID(node));
+          let newNids = Object.values(currentConfig).map((node) =>
+            id.getNID(node));
+
+          let oldTargetNid = context.hash(kid, oldNids);
+          let newTargetNid = context.hash(kid, newNids);
+
+          console.log("old target nid", oldTargetNid);
+          console.log("old config", oldConfig);
+          
+          let targetConfig = oldConfig[oldTargetNid.substring(0, 5)];
+
+          if (oldTargetNid !== newTargetNid) {
+            relocationTasks.push({key, targetConfig});
+          }
+        });
+
+        console.log('Different', relocationTasks);
+
+        // Step 4: Relocate each necessary object.
+        let relocationResults = [];
+        relocationTasks.forEach((task) => {
+          //get(task.key, (getErr, value) => {
+            let remote = {node: task.targetConfig, service: 'store', method: 'get'};
+            let message = [{'key': task.key, 'gid': context.gid}];
+            local.comm.send(message, remote, (getErr, value) => {
+              console.log('VALUE FROM GET', value);
+              if (getErr) {
+                relocationResults.push({key: task.key,
+                  status: 'failed', reason: 'get error'});
+                return;
+              }
+              let remote = {node: task.targetConfig, service: 'store', method: 'del'};
+              let message = [{'key': task.key, 'gid': context.gid}];
+              local.comm.send(message, remote, (delErr, value) => {
+                console.log('VALUE FROM GET', value);
+                if (delErr) {
+                  relocationResults.push({key: task.key,
+                    status: 'failed', reason: 'get error'});
+                  return;
+                }
+
+              });
+
+              put(value, task.key, (putErr, v) => {
+                if (putErr) {
+                  relocationResults.push({key: task.key,
+                    status: 'failed', reason: 'put error'});
+                } else {
+                  relocationResults.push({key: task.key,
+                    status: 'success'});
+                }
+              });
+          });
+        });
+
+        callback(null, {});
+      });
+    });
+
+  }
+
   /**
    * @param {string} gid
    * @param {Callback} callback
@@ -152,6 +237,7 @@ function store(config) {
     put,
     del,
     delGroup,
+    reconf,
     getPromise: promisify(get),
     delGroupPromise: promisify(delGroup),
   };
