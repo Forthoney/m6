@@ -38,31 +38,27 @@ function mr(config) {
       }
 
       if (++completed == numNotify) {
+        if (errors.length > 0) {
+          return callback(err);
+        }
+
+        let mergeResults = null;
         distService.comm
           .sendPromise([jobData, reducer], {
             service: "mr",
             method: "reduce",
           })
           .then((results) => {
-            const keys = Object.values(results);
-            const promises = keys.map((storeID) =>
+            const promises = Object.values(results).map((storeID) =>
               distService.store.getPromise(storeID),
             );
-
-            Promise.all(promises)
-              .then((vals) => {
-                const mergeResults = vals
-                  .flat()
-                  .filter((v) => Object.keys(v).length > 0);
-
-                console.error(mergeResults);
-                distService.store
-                  .delGroupPromise(jobData.jobID)
-                  .then(() => callback({}, mergeResults))
-                  .catch((e) => callback(e));
-              })
-              .catch((e) => callback(e));
+            return Promise.all(promises);
           })
+          .then((vals) => {
+            mergeResults = vals.flat().filter((v) => Object.keys(v).length > 0);
+            distService.store.delGroupPromise(jobData.jobID);
+          })
+          .then(() => callback({}, mergeResults))
           .catch((e) => callback(e));
       }
     };
