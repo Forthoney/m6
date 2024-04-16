@@ -207,7 +207,12 @@ function store(config) {
         console.log('Different', relocationTasks);
       });
 
-        callback();
+      distService.store.get(null, (err, allKeys) => {
+        console.log("ALLLLLLLLLLL GROUP KEYS POST RECONF", allKeys);
+      });
+
+
+      callback();
     });
   }
   
