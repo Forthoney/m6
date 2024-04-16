@@ -230,10 +230,10 @@ test('(2 pts) all.store.reconf(naiveHash)', (done) => {
             console.log("r4", r4Values);
           });
           distribution.local.comm.send(msg, r5, (e, r5Values) => {
-            console.log("r5", r4Values);
+            console.log("r5", r5Values);
           });
           distribution.local.comm.send(msg, r6, (e, r6Values) => {
-            console.log("r6", r4Values);
+            console.log("r6", r6Values);
           });
           expect(e).toBeFalsy();
           expect(v).toEqual(users[0]);
