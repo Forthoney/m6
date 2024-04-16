@@ -161,7 +161,9 @@ function store(config) {
               remote = {node: node, service: 'store', method: 'get'};
               message = [{'key': key, 'gid': context.gid}];
               local.comm.send(message, remote, (getErr, value) => {
-                console.log("Deleted Value", value);
+                distService.store.put(value, key, (e, putValue) => {
+                  console.log("putValue", putValue);
+                });
               });
             });
 
