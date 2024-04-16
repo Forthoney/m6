@@ -123,29 +123,35 @@ function store(config) {
   }
 
   function reconf(oldConfig, callback = () => {}) {
-    console.log('oldConfig', oldConfig);
-
     // Step 1. Get current group config.
     distService.groups.get(context.gid, (e, v) => {
       let keys = Object.keys(v);
-      console.log("Keys: ", keys);
-
       let firstKey = keys[0] || null;
-      console.log("First Key?", firstKey);
-
       let currentConfig;
 
+      // Check for a valid configuration.
       if (firstKey != null) {
         currentConfig = v[firstKey];
       }
-
-      console.log("Current Config", currentConfig);
 
       // Step 2. Get all keys in current group.
       distService.store.get(null, (err, allKeys) => {
         console.log("all keys pre rollout", allKeys);
         allKeys = [...new Set(allKeys)];
         console.log("All Keys: ", allKeys)
+
+        // Step 3. Identify removed nodes & add their keys to the list.
+        let missingInNewConfig = {};
+
+        // Iterate over each node in oldConfig.
+        Object.keys(oldConfig).forEach(key => {
+            if (!currentConfig[key]) {
+                // If a node in oldConfig is not present in currentConfig, add it to the result
+                missingInNewConfig[key] = oldConfig[key];
+            }
+        });
+
+        console.log("missingInNewConfig", missingInNewConfig)
 
         // Step 3: Identify which objects need to be relocated.
         let relocationTasks = [];
