@@ -156,21 +156,29 @@ function store(config) {
           return new Promise((resolve, reject) => {
             let remote = { node: node, service: 'store', method: 'get' };
             let message = [{ 'key': null, 'gid': context.gid }];
-            local.comm.send(message, remote, (getErr, value) => {
+            local.comm.send(message, remote, (getErr, removedKeys) => {
               if (getErr) {
                 reject(getErr);
               } else {
-                console.log('VALUES FROM MISSING GET', value);
+                console.log('VALUES FROM MISSING GET', removedKeys);
   
                 // Process each key retrieved and update it in the store
-                let updateTasks = value.map(key => {
+                let updateTasks = removedKeys.map(key => {
                   return new Promise((resolveUpdate, rejectUpdate) => {
-                    distService.store.put(key, value, (putErr, putResult) => {
-                      if (putErr) {
-                        rejectUpdate(putErr);
+                    remote = { node: node, service: 'store', method: 'get' };
+                    message = [{ 'key': key, 'gid': context.gid }];
+                    local.comm.send(message, remote, (getErr, valueToPut) => {
+                      if (getErr) {
+                        rejectUpdate(getErr);
                       } else {
-                        console.log("Updated key", key, "with result", putResult);
-                        resolveUpdate(putResult);
+                        distService.store.put(key, valueToPut, (putErr, putResult) => {
+                          if (putErr) {
+                            rejectUpdate(putErr);
+                          } else {
+                            console.log("Updated key", key, "with result", putResult);
+                            resolveUpdate(putResult);
+                          }
+                        });
                       }
                     });
                   });
