@@ -172,6 +172,10 @@ function store(config) {
           });
         });
 
+        distService.store.get(null, (err, allKeys2) => {
+          console.log("ALLLLLLLLLLL GROUP KEYS POST RECONF", allKeys2);
+        });
+
         console.log("allKeys", allKeys);
 
         // Step 3: Identify which objects need to be relocated.
@@ -205,10 +209,6 @@ function store(config) {
         });
 
         console.log('Different', relocationTasks);
-      });
-
-      distService.store.get(null, (err, allKeys) => {
-        console.log("ALLLLLLLLLLL GROUP KEYS POST RECONF", allKeys);
       });
 
 
