@@ -235,6 +235,7 @@ test('(2 pts) all.store.reconf(naiveHash)', (done) => {
           distribution.local.comm.send(msg, r6, (e, r6Values) => {
             console.log("r6", r6Values);
           });
+          console.log("FIRST CHECK VALUE", v);
           expect(e).toBeFalsy();
           expect(v).toEqual(users[0]);
         } catch (error) {

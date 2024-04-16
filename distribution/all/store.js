@@ -162,7 +162,7 @@ function store(config) {
               } else {
                 console.log('VALUES FROM MISSING GET', removedKeys);
   
-                // Process each key retrieved and update it in the store
+                // Process each key retrieved and update it in the store.
                 let updateTasks = removedKeys.map(key => {
                   return new Promise((resolveUpdate, rejectUpdate) => {
                     remote = { node: node, service: 'store', method: 'get' };
