@@ -161,8 +161,31 @@ function store(config) {
                 reject(getErr);
               } else {
                 console.log('VALUES FROM MISSING GET', value);
-                // Further processing or resolve the promise
-                resolve(value);
+  
+                // Process each key retrieved and update it in the store
+                let updateTasks = value.map(key => {
+                  return new Promise((resolveUpdate, rejectUpdate) => {
+                    distService.store.put(key, value, (putErr, putResult) => {
+                      if (putErr) {
+                        rejectUpdate(putErr);
+                      } else {
+                        console.log("Updated key", key, "with result", putResult);
+                        resolveUpdate(putResult);
+                      }
+                    });
+                  });
+                });
+  
+                // Wait for all update tasks to complete
+                Promise.all(updateTasks)
+                  .then(updateResults => {
+                    console.log("All updates completed for node", node);
+                    resolve(updateResults);
+                  })
+                  .catch(updateError => {
+                    console.log("Error updating data for node", node, updateError);
+                    reject(updateError);
+                  });
               }
             });
           });
