@@ -5,8 +5,9 @@
 
 const assert = require("node:assert");
 const local = require("../local/local");
-const { toAsync, createRPC } = require("../util/wire");
-const id = require("../util/id");
+const util = require("../util/util");
+const { toAsync, createRPC } = util.wire;
+const id = util.id;
 
 /**
  * @param {object} config
@@ -42,7 +43,6 @@ function mr(config) {
           return callback(err);
         }
 
-        let mergeResults = null;
         distService.comm
           .sendPromise([jobData, reducer], {
             service: "mr",
@@ -55,10 +55,12 @@ function mr(config) {
             return Promise.all(promises);
           })
           .then((vals) => {
-            mergeResults = vals.flat().filter((v) => Object.keys(v).length > 0);
-            distService.store.delGroupPromise(jobData.jobID);
+            const mergeResults = vals
+              .flat()
+              .filter((v) => Object.keys(v).length > 0);
+            callback({}, mergeResults);
+            // return distService.store.delGroupPromise(jobData.jobID);
           })
-          .then(() => callback({}, mergeResults))
           .catch((e) => callback(e));
       }
     };
@@ -90,7 +92,7 @@ function mr(config) {
 
         distService.comm.send([jobData, setting.map], {
           service: "mr",
-          method: setting.async ? "mapPromise" : "map",
+          method: "map",
         });
       })
       .catch((e) => callback(e, {}));

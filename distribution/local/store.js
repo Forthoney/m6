@@ -4,6 +4,7 @@ const fs = require("node:fs");
 const assert = require("node:assert");
 const path = require("node:path");
 const util = require("../util/util");
+const { promisify } = require("node:util");
 
 /** @typedef {import("../types").Callback} Callback */
 
@@ -213,4 +214,12 @@ function del(key, callback = () => {}) {
   });
 }
 
-module.exports = { get, getAll, put, del, delGroup };
+module.exports = {
+  get,
+  getAll,
+  put,
+  del,
+  delGroup,
+  getPromise: promisify(get),
+  getAllPromise: promisify(getAll),
+};

@@ -10,8 +10,6 @@ const serialization = require("../util/serialization");
     After your node has booted, you should call the callback.
 */
 
-const nodeConfig = global.nodeConfig;
-
 function isValidBody(body) {
   if (body.length === 0) {
     return new Error("No body");
@@ -25,7 +23,8 @@ function isValidBody(body) {
   }
 }
 
-const start = function (onStart) {
+function start(onStart) {
+  const nodeConfig = global.nodeConfig;
   const server = http.createServer((req, res) => {
     /* Your server will be listening for PUT requests. */
 
@@ -45,9 +44,6 @@ const start = function (onStart) {
 
     const pathname = url.parse(req.url).pathname;
     const [, service, method] = pathname.split("/");
-
-    console.log(`[SERVER] (${nodeConfig.ip}:${nodeConfig.port})
-        Request: ${service}:${method}`);
 
     /*
 
@@ -95,8 +91,12 @@ const start = function (onStart) {
           return;
         }
 
-        console.log(`[SERVER] ${service}:${method} Args: ${JSON.stringify(jsBody)} 
-            ServiceCallback: ${serviceCallback}`);
+        console.log(
+          `[SERVER] (${nodeConfig.ip}:${nodeConfig.port})\n`,
+          `Request: ${service}:${method}\n`,
+          `Args: ${JSON.stringify(jsBody)} 
+            ServiceCallback: ${serviceCallback}`,
+        );
 
         if (method in ser) {
           ser[method](...jsBody, serviceCallback);
@@ -130,7 +130,7 @@ const start = function (onStart) {
     }
     onStart(server);
   });
-};
+}
 
 module.exports = {
   start: start,

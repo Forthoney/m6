@@ -110,9 +110,6 @@ function serializeInner(object, mapping) {
     return "null";
   }
 
-  if (object instanceof Buffer) {
-    console.error(object);
-  }
   switch (typeof object) {
     case "number":
     case "boolean":
@@ -271,9 +268,6 @@ function deserialize(string) {
   // flag if any keyword replacement occurred
   let removeUnderscore = false;
 
-  if (string == "") {
-    console.error("EMPTY STRING=================================");
-  }
   const parsed = JSON.parse(string, (key, item) => {
     removeUnderscore =
       removeUnderscore || key.match(/(^_+type$)|(^_+value$)|(^_+objectId$)/g);

@@ -20,7 +20,6 @@ const serialization = require("../util/serialization");
  * @return {void}
  */
 function send(message, remote, callback = () => {}) {
-  const msg = serialization.serialize(message);
   const options = {
     hostname: remote.node.ip,
     port: remote.node.port,
@@ -36,23 +35,18 @@ function send(message, remote, callback = () => {}) {
       body += chunk;
     });
     res.on("end", () => {
-      if (body == "") {
-        console.error(msg);
-      }
       const [err, content] = serialization.deserialize(body);
       callback(err, content);
     });
   });
 
   req.on("error", (e) => {
-    callback(
-      new Error(
-        `${e.message}: sending ${message} to ${remote.node.ip}:${remote.node.port}`,
-      ),
-    );
+    const err = `${e.message}: sending ${message} to ${remote.node.ip}:${remote.node.port}`;
+    console.log(err);
+    callback(Error(err));
   });
 
-  req.write(msg);
+  req.write(serialization.serialize(message));
   req.end();
 }
 
