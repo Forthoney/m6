@@ -138,7 +138,7 @@ function store(config) {
       distService.store.get(null, (err, allKeys) => {
         allKeys = [...new Set(allKeys)];
 
-        // Step 3. Identify removed nodes & add their keys to the list.
+        // Step 3. Identify removed node(s) & add their keys to the list.
         let missingInNewConfig = {};
 
         // Iterate over each node in oldConfig.
@@ -156,8 +156,12 @@ function store(config) {
           let message = [{'key': null, 'gid': context.gid}];
           local.comm.send(message, remote, (getErr, value) => {
             console.log('VALUES FROM MISSING GET', value);
+            allKeys.push(...value);
+            // Step 4. Remove the old value(s) from the deleted node(s).
           });
         });
+
+        console.log("allKeys", allKeys);
 
         // Step 3: Identify which objects need to be relocated.
         let relocationTasks = [];
