@@ -125,7 +125,6 @@ function get(key, callback = () => {}) {
  * @return {void}
  */
 function getAll(gid, callback = () => {}) {
-  console.log("---------------------------------------------------", gid);
   readDir(path.join(storeDirpath, gid), (e, filenames) => {
     if (e) {
       return e["code"] === "ENOENT" ? callback(null, []) : callback(e);
@@ -222,4 +221,5 @@ module.exports = {
   del,
   delGroup,
   getPromise: promisify(get),
+  getAllPromise: promisify(getAll),
 };
