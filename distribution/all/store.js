@@ -139,10 +139,11 @@ function store(config) {
         currentConfig = v[firstKey];
       }
 
-      console.log("Current  Config", currentConfig);
+      console.log("Current Config", currentConfig);
 
       // Step 2. Get all keys in current group.
       distService.store.get(null, (err, allKeys) => {
+        console.log("all keys pre rollout", allKeys);
         allKeys = [...new Set(allKeys)];
         console.log("All Keys: ", allKeys)
 
