@@ -256,9 +256,6 @@ test('(2 pts) all.store.reconf(naiveHash)', (done) => {
                 try {
                   expect(e).toBeFalsy();
                   expect(v).toEqual(users[4]);
-                  distribution["group1"].store.get(null, (err, allKeys) => {
-                    console.log("IN TEST", allKeys);
-                  });
                   done();
                 } catch (error) {
                   done(error);
@@ -280,6 +277,9 @@ test('(2 pts) all.store.reconf(naiveHash)', (done) => {
       distribution.group1.store.put(users[2], keys[2], (e, v) => {
         distribution.group1.store.put(users[3], keys[3], (e, v) => {
           distribution.group1.store.put(users[4], keys[4], (e, v)=> {
+            distribution["group1"].store.get(null, (err, allKeys) => {
+              console.log("IN TEST", allKeys);
+            });
             // We need to pass a copy of the group's
             // nodes before the changes to reconf()
             const groupCopy = {...group1Group};
