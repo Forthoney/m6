@@ -128,14 +128,23 @@ function store(config) {
     // Step 1. Get current group config.
     distService.groups.get(context.gid, (e, v) => {
       let keys = Object.keys(v);
-      firstKey = keys[0] || null;
+      console.log("Keys: ", keys);
+
+      let firstKey = keys[0] || null;
+      console.log("First Key?", firstKey);
+
+      let currentConfig;
+
       if (firstKey != null) {
         currentConfig = v[firstKey];
       }
 
+      console.log("Current  Config", currentConfig);
+
       // Step 2. Get all keys in current group.
       distService.store.get(null, (err, allKeys) => {
         allKeys = [...new Set(allKeys)];
+        console.log("All Keys: ", allKeys)
 
         // Step 3: Identify which objects need to be relocated.
         let relocationTasks = [];
@@ -146,14 +155,19 @@ function store(config) {
           // and determine its target node.
           let oldNids = Object.values(oldConfig).map((node) =>
             id.getNID(node));
+
+          console.log("oldNids", oldNids);
+
           let newNids = Object.values(currentConfig).map((node) =>
             id.getNID(node));
+
+          console.log("newNids", newNids);
 
           let oldTargetNid = context.hash(kid, oldNids);
           let newTargetNid = context.hash(kid, newNids);
 
           console.log("old target nid", oldTargetNid);
-          console.log("old config", oldConfig);
+          console.log("new target nid", newTargetNid);
           
           let targetConfig = oldConfig[oldTargetNid.substring(0, 5)];
 
@@ -167,7 +181,7 @@ function store(config) {
         // Step 4: Relocate each necessary object.
         let relocationResults = [];
         relocationTasks.forEach((task) => {
-          //get(task.key, (getErr, value) => {
+          get(task.key, (getErr, value) => {
             let remote = {node: task.targetConfig, service: 'store', method: 'get'};
             let message = [{'key': task.key, 'gid': context.gid}];
             local.comm.send(message, remote, (getErr, value) => {
