@@ -156,8 +156,17 @@ function store(config) {
           let message = [{'key': null, 'gid': context.gid}];
           local.comm.send(message, remote, (getErr, value) => {
             console.log('VALUES FROM MISSING GET', value);
-            allKeys.push(...value);
-            // Step 4. Remove the old value(s) from the deleted node(s).
+            // Step 4. Add the deleted value(s) using the new new config.
+            value.forEach((key) => {
+              remote = {node: node, service: 'store', method: 'get'};
+              message = [{'key': key, 'gid': context.gid}];
+              local.comm.send(message, remote, (getErr, value) => {
+                console.log("Deleted Value", value);
+              });
+            });
+
+
+            // Step 5. Remove the old value(s) from the deleted node(s).
           });
         });
 
