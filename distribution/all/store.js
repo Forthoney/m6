@@ -136,9 +136,7 @@ function store(config) {
 
       // Step 2. Get all keys in current group.
       distService.store.get(null, (err, allKeys) => {
-        console.log("all keys pre rollout", allKeys);
         allKeys = [...new Set(allKeys)];
-        console.log("All Keys: ", allKeys)
 
         // Step 3. Identify removed nodes & add their keys to the list.
         let missingInNewConfig = {};
@@ -151,7 +149,15 @@ function store(config) {
             }
         });
 
-        console.log("missingInNewConfig", missingInNewConfig)
+        console.log("missingInNewConfig", missingInNewConfig);
+        missingInNewConfig.forEach((node) => {
+          console.log("MISSING NODE", node);
+          //let remote = {node: task.targetConfig, service: 'store', method: 'get'};
+          //let message = [{'key': task.key, 'gid': gid}];
+          // local.comm.send(message, remote, (getErr, value) => {
+          //   console.log('VALUE FROM GET', value);
+          // });
+        });
 
         // Step 3: Identify which objects need to be relocated.
         let relocationTasks = [];
