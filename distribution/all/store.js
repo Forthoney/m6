@@ -152,11 +152,11 @@ function store(config) {
         console.log("missingInNewConfig", missingInNewConfig);
         Object.values(missingInNewConfig).forEach((node) => {
           console.log("MISSING NODE", node);
-          //let remote = {node: task.targetConfig, service: 'store', method: 'get'};
-          //let message = [{'key': task.key, 'gid': gid}];
-          // local.comm.send(message, remote, (getErr, value) => {
-          //   console.log('VALUE FROM GET', value);
-          // });
+          let remote = {node: node, service: 'store', method: 'get'};
+          let message = [{'key': null, 'gid': context.gid}];
+          local.comm.send(message, remote, (getErr, value) => {
+            console.log('VALUES FROM MISSING GET', value);
+          });
         });
 
         // Step 3: Identify which objects need to be relocated.
