@@ -122,6 +122,9 @@ function store(config) {
     });
   }
 
+  // TODO: Delete moved key-value pairs.
+  // TODO: Reconf any values that need to be moved between nodes that WEREN'T REMOVED.
+  // TODO: Why the difference in expected vs real node assignments?
   function reconf(oldConfig, callback = () => {}) {
     // Step 1. Get current group config.
     distService.groups.get(context.gid, (e, v) => {
