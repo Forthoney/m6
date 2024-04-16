@@ -256,6 +256,9 @@ test('(2 pts) all.store.reconf(naiveHash)', (done) => {
                 try {
                   expect(e).toBeFalsy();
                   expect(v).toEqual(users[4]);
+                  distribution["group1"].store.get(null, (err, allKeys) => {
+                    console.log("IN TEST", allKeys);
+                  });
                   done();
                 } catch (error) {
                   done(error);
