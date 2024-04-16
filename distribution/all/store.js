@@ -177,49 +177,12 @@ function store(config) {
         });
 
         console.log('Different', relocationTasks);
-
-        // Step 4: Relocate each necessary object.
-        let relocationResults = [];
-        relocationTasks.forEach((task) => {
-          get(task.key, (getErr, value) => {
-            let remote = {node: task.targetConfig, service: 'store', method: 'get'};
-            let message = [{'key': task.key, 'gid': context.gid}];
-            local.comm.send(message, remote, (getErr, value) => {
-              console.log('VALUE FROM GET', value);
-              if (getErr) {
-                relocationResults.push({key: task.key,
-                  status: 'failed', reason: 'get error'});
-                return;
-              }
-              let remote = {node: task.targetConfig, service: 'store', method: 'del'};
-              let message = [{'key': task.key, 'gid': context.gid}];
-              local.comm.send(message, remote, (delErr, value) => {
-                console.log('VALUE FROM GET', value);
-                if (delErr) {
-                  relocationResults.push({key: task.key,
-                    status: 'failed', reason: 'get error'});
-                  return;
-                }
-
-              });
-
-              put(value, task.key, (putErr, v) => {
-                if (putErr) {
-                  relocationResults.push({key: task.key,
-                    status: 'failed', reason: 'put error'});
-                } else {
-                  relocationResults.push({key: task.key,
-                    status: 'success'});
-                }
-              });
-          });
-        });
-
-        callback(null, {});
       });
-    });
 
+        callback();
+    });
   }
+  
 
   /**
    * @param {string} gid
