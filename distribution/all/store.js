@@ -168,7 +168,7 @@ function store(config) {
                     remote = { node: node, service: 'store', method: 'get' };
                     message = [{ 'key': key, 'gid': context.gid }];
                     local.comm.send(message, remote, (getErr, valueToPut) => {
-                      console.log("Value to put!", valueToPut);
+                      console.log(key, "Value to put!", valueToPut);
                       if (getErr) {
                         rejectUpdate(getErr);
                       } else {
