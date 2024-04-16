@@ -92,7 +92,7 @@ function mr(config) {
 
         distService.comm.send([jobData, setting.map], {
           service: "mr",
-          method: setting.async ? "mapPromise" : "map",
+          method: "map",
         });
       })
       .catch((e) => callback(e, {}));
