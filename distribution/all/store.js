@@ -150,7 +150,7 @@ function store(config) {
         });
 
         console.log("missingInNewConfig", missingInNewConfig);
-        missingInNewConfig.forEach((node) => {
+        Object.values(missingInNewConfig).forEach((node) => {
           console.log("MISSING NODE", node);
           //let remote = {node: task.targetConfig, service: 'store', method: 'get'};
           //let message = [{'key': task.key, 'gid': gid}];
