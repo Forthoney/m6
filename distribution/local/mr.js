@@ -9,10 +9,9 @@ const assert = require("node:assert");
 const store = require("./store");
 const comm = require("./comm");
 const groups = require("./groups");
-const id = require("../util/id");
 const util = require("../util/util");
-const { writeFileSync } = require("node:fs");
-const { promisify } = require("node:util");
+const { warn } = require("node:console");
+const id = util.id;
 
 /**
  * @param {string} gid
@@ -166,84 +165,81 @@ function map(jobData, mapper, callback = () => {}) {
   });
 }
 
+function mapComputation(gid, mapper) {
+  return store
+    .getPromise({ gid, key: null })
+    .then((keys) =>
+      Promise.all(
+        keys.map((key) =>
+          store.getPromise({ gid, key }).then((data) => mapper(key, data)),
+        ),
+      ),
+    )
+    .then((results) => {
+      const mapperRes = new Map();
+
+      results.flat().forEach((res) => {
+        Object.entries(res).forEach(([key, val]) => {
+          if (mapperRes.has(key)) {
+            mapperRes.get(key).push(val);
+          } else {
+            mapperRes.set(key, [val]);
+          }
+        });
+      });
+      console.log(mapperRes);
+      return mapperRes;
+    });
+}
+
 /**
  * @param {MRJobMetadata} jobData
  * @param {Mapper} mapper
  * @param {Callback} callback
  */
 function mapPromise(jobData, mapper, callback = () => {}) {
-  const { gid } = jobData;
-  const storeGetPromise = promisify(store.get);
-  storeGetPromise({ gid: gid, key: null }).then((keys) => {
-    groups.getPromise(gid).then((neighbors) => {
+  const { jobID, gid, supervisor } = jobData;
+
+  Promise.all([mapComputation(gid, mapper), groups.getPromise(gid)])
+    .then(([mapperRes, neighbors]) => {
       assert(neighbors);
-      const neighborNIDNodeMap = new Map(
+      const entries = Array.from(mapperRes.entries());
+      const peerNIDNodeMap = new Map(
         Object.values(neighbors).map((node) => [id.getNID(node), node]),
       );
-      const mapTasks = keys.map((key) => {
-        storeGetPromise({ gid, key })
-          .then((data) => mapper(key, data))
-          .then((result) => (result instanceof Array ? result : [result]));
+      const peerNIDs = Array.from(peerNIDNodeMap.keys());
+      const storePromises = entries.map(([key, val]) => {
+        const entry = { [key]: val };
+        const destinationNode = peerNIDNodeMap.get(
+          id.consistentHash(id.getID(key), peerNIDs),
+        );
+        assert(destinationNode);
+
+        const uniqueKey = id.getID(entry) + id.getSID(global.nodeConfig);
+        const remote = {
+          node: destinationNode,
+          service: "store",
+          method: "put",
+        };
+        return comm.sendPromise(
+          [entry, { gid: jobID, key: uniqueKey }],
+          remote,
+        );
       });
-      Promise.all(mapTasks).then((results) => {
-        const mapperRes = new Map();
-        results = results.flat();
-        results.forEach((res) => {
-          Object.entries(res).forEach(([key, val]) => {
-            if (mapperRes.has(key)) {
-              mapperRes.get(key).push(val);
-            } else {
-              mapperRes.set(key, [val]);
-            }
-          });
-        });
-        const entries = Array;
-        return mapperRes;
-      });
-    });
-  });
-  store.get({ gid: gid, key: null }, (e, keys) => {
-    if (e) return callback(e);
-
-    groups.get(gid, (e, neighbors) => {
-      if (e) return callback(e);
-
-      assert(neighbors);
-      const neighborNIDNodeMap = new Map(
-        Object.values(neighbors).map((node) => [id.getNID(node), node]),
-      );
-
-      const mapperRes = new Map();
-      const storeBar = storeBarrier(
-        jobData,
-        mapperRes,
-        keys.length,
-        neighborNIDNodeMap,
-        callback,
-      );
-
-      const mapTasks = keys.map((storeKey) => {
-        storeGetPromise({ gid, key: storeKey })
-          .then((data) => mapper(storeKey, data))
-          .then((result) => {
-            result = result instanceof Array ? result : [result];
-            result.forEach((res) => {
-              Object.entries(res).forEach(([key, val]) => {
-                if (mapperRes.has(key)) {
-                  mapperRes.get(key).push(val);
-                } else {
-                  mapperRes.set(key, [val]);
-                }
-              });
-            });
-          });
-      });
-
-      Promise.all(mapTasks)
-        .then((_) => storeBar(null))
-        .catch((e) => storeBar(e));
-    });
-  });
+      return Promise.all(storePromises);
+    })
+    .then((_) => {
+      const notifyRemote = {
+        node: supervisor,
+        service: `mr-${jobID}`,
+        method: "call",
+      };
+      return comm.sendPromise([null], notifyRemote);
+    })
+    .then((_) => {
+      callback(null, jobID);
+    })
+    .catch((e) => callback(e));
 }
 
 /**
@@ -261,12 +257,13 @@ function reduce(jobData, reducer, callback = (_e, _) => {}) {
       Object.values(neighbors).map((node) => [id.getNID(node), node]),
     );
     store.getAll(jobID, (e, mapResults) => {
+      console.log("mapresults=========", mapResults);
       if (e) return callback(e);
 
       assert(mapResults);
       const organizedMapResults = mapResults.reduce((accumulator, obj) => {
-        const key = Object.keys(obj)[0];
-        const val = obj[key];
+        const [key, val] = Object.entries(obj)[0];
+        console.log(key, val);
 
         if (key in accumulator) {
           accumulator[key] = accumulator[key].concat(val);

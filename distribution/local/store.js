@@ -4,6 +4,7 @@ const fs = require("node:fs");
 const assert = require("node:assert");
 const path = require("node:path");
 const util = require("../util/util");
+const { promisify } = require("node:util");
 
 /** @typedef {import("../types").Callback} Callback */
 
@@ -124,6 +125,7 @@ function get(key, callback = () => {}) {
  * @return {void}
  */
 function getAll(gid, callback = () => {}) {
+  console.log("---------------------------------------------------", gid);
   readDir(path.join(storeDirpath, gid), (e, filenames) => {
     if (e) {
       return e["code"] === "ENOENT" ? callback(null, []) : callback(e);
@@ -213,4 +215,11 @@ function del(key, callback = () => {}) {
   });
 }
 
-module.exports = { get, getAll, put, del, delGroup };
+module.exports = {
+  get,
+  getAll,
+  put,
+  del,
+  delGroup,
+  getPromise: promisify(get),
+};
