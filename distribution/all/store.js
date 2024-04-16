@@ -128,91 +128,57 @@ function store(config) {
       let keys = Object.keys(v);
       let firstKey = keys[0] || null;
       let currentConfig;
-
+  
       // Check for a valid configuration.
       if (firstKey != null) {
         currentConfig = v[firstKey];
       }
-
+  
       // Step 2. Get all keys in current group.
       distService.store.get(null, (err, allKeys) => {
         allKeys = [...new Set(allKeys)];
-
+  
         // Step 3. Identify removed node(s) & add their keys to the list.
         let missingInNewConfig = {};
-
+  
         // Iterate over each node in oldConfig.
         Object.keys(oldConfig).forEach(key => {
-            if (!currentConfig[key]) {
-                // If a node in oldConfig is not present in currentConfig, add it to the result
-                missingInNewConfig[key] = oldConfig[key];
-            }
-        });
-
-        console.log("missingInNewConfig", missingInNewConfig);
-        Object.values(missingInNewConfig).forEach((node) => {
-          console.log("MISSING NODE", node);
-          let remote = {node: node, service: 'store', method: 'get'};
-          let message = [{'key': null, 'gid': context.gid}];
-          local.comm.send(message, remote, (getErr, value) => {
-            console.log('VALUES FROM MISSING GET', value);
-            // Step 4. Add the deleted value(s) using the new new config.
-            value.forEach((key) => {
-              remote = {node: node, service: 'store', method: 'get'};
-              message = [{'key': key, 'gid': context.gid}];
-              local.comm.send(message, remote, (getErr, value) => {
-                distService.store.put(value, key, (e, putValue) => {
-                  console.log("putValue", putValue);
-                });
-              });
-            });
-
-
-            // Step 5. Remove the old value(s) from the deleted node(s).
-          });
-        });
-
-        distService.store.get(null, (err, allKeys2) => {
-          console.log("ALLLLLLLLLLL GROUP KEYS POST RECONF", allKeys2);
-        });
-
-        console.log("allKeys", allKeys);
-
-        // Step 3: Identify which objects need to be relocated.
-        let relocationTasks = [];
-        allKeys.forEach((key) => {
-          let kid = id.getID(key);
-
-          // Use both old and new groups to hash the kid
-          // and determine its target node.
-          let oldNids = Object.values(oldConfig).map((node) =>
-            id.getNID(node));
-
-          console.log("oldNids", oldNids);
-
-          let newNids = Object.values(currentConfig).map((node) =>
-            id.getNID(node));
-
-          console.log("newNids", newNids);
-
-          let oldTargetNid = context.hash(kid, oldNids);
-          let newTargetNid = context.hash(kid, newNids);
-
-          console.log("old target nid", oldTargetNid);
-          console.log("new target nid", newTargetNid);
-          
-          let targetConfig = oldConfig[oldTargetNid.substring(0, 5)];
-
-          if (oldTargetNid !== newTargetNid) {
-            relocationTasks.push({key, targetConfig});
+          if (!currentConfig[key]) {
+            // If a node in oldConfig is not present in currentConfig, add it to the result
+            missingInNewConfig[key] = oldConfig[key];
           }
         });
-
-        console.log('Different', relocationTasks);
+  
+        console.log("missingInNewConfig", missingInNewConfig);
+  
+        // Create an array of promises for handling missing nodes
+        let handleMissingNodes = Object.values(missingInNewConfig).map(node => {
+          return new Promise((resolve, reject) => {
+            let remote = { node: node, service: 'store', method: 'get' };
+            let message = [{ 'key': null, 'gid': context.gid }];
+            local.comm.send(message, remote, (getErr, value) => {
+              if (getErr) {
+                reject(getErr);
+              } else {
+                console.log('VALUES FROM MISSING GET', value);
+                // Further processing or resolve the promise
+                resolve(value);
+              }
+            });
+          });
+        });
+  
+        // Wait for all missing node processes to complete
+        Promise.all(handleMissingNodes).then(() => {
+          distService.store.get(null, (err, allKeys2) => {
+            console.log("ALLLLLLLLLLL GROUP KEYS POST RECONF", allKeys2);
+            callback(); // Ensure callback is called here
+          });
+        }).catch(error => {
+          console.error("Error handling missing nodes:", error);
+          callback();
+        });
       });
-
-
-      callback();
     });
   }
   
