@@ -222,6 +222,19 @@ test('(2 pts) all.store.reconf(naiveHash)', (done) => {
 
       distribution.local.comm.send(messages[0], remote, (e, v) => {
         try {
+          const r4 = {node: n4, service: 'store', method: 'get'};
+          const r5 = {node: n5, service: 'store', method: 'get'};
+          const r6 = {node: n6, service: 'store', method: 'get'};
+          const msg = [{key: null, gid: 'group1'}];
+          distribution.local.comm.send(msg, r4, (e, r4Values) => {
+            console.log("r4", r4Values);
+          });
+          distribution.local.comm.send(msg, r5, (e, r5Values) => {
+            console.log("r5", r4Values);
+          });
+          distribution.local.comm.send(msg, r6, (e, r6Values) => {
+            console.log("r6", r4Values);
+          });
           expect(e).toBeFalsy();
           expect(v).toEqual(users[0]);
         } catch (error) {
