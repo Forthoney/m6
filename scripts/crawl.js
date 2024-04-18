@@ -24,7 +24,6 @@ function map(_key, vUrl) {
 }
 
 function reduce(kUrl, vData) {
-  console.log("=================================================", vData);
   return { [kUrl]: vData };
 }
 
@@ -51,7 +50,7 @@ function startNodes(cb) {
 function doMapReduce() {
   distribution.crawl.store.getPromise(null).then((keys) => {
     distribution.crawl.mr.exec({ keys, map, reduce, async: true }, (e, v) => {
-      console.error("CALLBACK");
+      console.error(e);
       assert(Object.values(e).length === 0);
       console.log("FINAL RESULT: ", v);
     });

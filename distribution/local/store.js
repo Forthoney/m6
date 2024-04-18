@@ -64,13 +64,16 @@ function resolveFilePath(key, val, callback) {
  * @return {void}
  */
 function readDir(path, callback) {
-  fs.readdir(path, (err, files) => {
+  fs.readdir(path, { withFileTypes: true }, (err, files) => {
     if (err) {
       const wrappedErr = Error(err.message);
       wrappedErr["code"] = err.code;
       return callback(wrappedErr);
     } else {
-      callback(null, files);
+      const filenames = files
+        .filter((item) => item.isFile())
+        .map((item) => item.name);
+      callback(null, filenames);
     }
   });
 }
