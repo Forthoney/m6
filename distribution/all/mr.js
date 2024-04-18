@@ -31,6 +31,7 @@ function mr(config) {
    * @return {void}
    */
   function setupNotifyEndpoint(jobData, numNotify, reducer, callback) {
+    const { jobID } = jobData;
     let completed = 0;
     const errors = [];
     const notify = (err) => {
@@ -49,8 +50,8 @@ function mr(config) {
             method: "reduce",
           })
           .then((results) => {
-            const promises = Object.values(results).map((storeID) =>
-              distService.store.getPromise(storeID),
+            const promises = Object.values(results).map((key) =>
+              distService.store.getSubgroupPromise(key, `reduce-${jobID}`),
             );
             return Promise.all(promises);
           })
@@ -64,7 +65,7 @@ function mr(config) {
           .catch((e) => callback(e));
       }
     };
-    createRPC(toAsync(notify), `mr-${jobData.jobID}`);
+    createRPC(toAsync(notify), `notify-${jobData.jobID}`);
     return;
   }
 

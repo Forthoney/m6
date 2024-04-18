@@ -69,14 +69,13 @@ function map(jobData, mapper, callback = () => {}) {
         assert(destinationNode);
 
         const uniqueKey = id.getID(entry) + id.getSID(global.nodeConfig);
-        const remote = {
-          node: destinationNode,
-          service: "store",
-          method: "put",
-        };
         return comm.sendPromise(
-          [entry, { gid: jobID, key: uniqueKey }],
-          remote,
+          [entry, { gid: `${gid}/map-${jobID}`, key: uniqueKey }],
+          {
+            node: destinationNode,
+            service: "store",
+            method: "put",
+          },
         );
       });
       return Promise.all(storePromises);
@@ -84,7 +83,7 @@ function map(jobData, mapper, callback = () => {}) {
     .then((_) => {
       const notifyRemote = {
         node: supervisor,
-        service: `mr-${jobID}`,
+        service: `notify-${jobID}`,
         method: "call",
       };
       return comm.sendPromise([null], notifyRemote);
@@ -112,7 +111,10 @@ function reduceOnMapResults(mapResults, reducer) {
  */
 function reduce(jobData, reducer, callback = () => {}) {
   const { gid, jobID } = jobData;
-  Promise.all([store.getAllPromise(jobID), calcPeerNIDNodeMap(gid)])
+  Promise.all([
+    store.getAllPromise(`${gid}/map-${jobID}`),
+    calcPeerNIDNodeMap(gid),
+  ])
     .then(([mapResults, peerNIDNodeMap]) => {
       assert(mapResults);
       const key = jobID + mySid;
@@ -130,8 +132,10 @@ function reduce(jobData, reducer, callback = () => {}) {
       const reduceResult = reduceOnMapResults(mapResults, reducer);
 
       return new Promise((resolve, reject) => {
-        comm.send([reduceResult, { gid, key }], remote, (e, _) =>
-          e ? reject(e) : resolve(key),
+        comm.send(
+          [reduceResult, { gid: `${gid}/reduce-${jobID}`, key }],
+          remote,
+          (e, _) => (e ? reject(e) : resolve(key)),
         );
       });
     })
