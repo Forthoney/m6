@@ -1,5 +1,11 @@
+// need to initialize global.nodeConfig before the "require"s because
+// some services eagerly initialize internal values based off of
+// global.nodeConfig
 global.nodeConfig = { ip: "127.0.0.1", port: 7070 };
+
 const assert = require("node:assert");
+const fs = require("node:fs");
+const path = require("node:path");
 const distribution = require("../distribution");
 const groupMaker = require("../distribution/all/groups");
 
@@ -57,7 +63,14 @@ function doMapReduce() {
   });
 }
 
-const urls = [{ 0: "https://example.com" }];
+const urlFile = fs.readFileSync(
+  path.join(__dirname, "..", "data", "urls.txt"),
+  "utf8",
+);
+const urls = urlFile.split("\n").map((url, idx) => {
+  return { [idx]: url };
+});
+console.log(urls);
 
 let localServer = null;
 distribution.node.start((server) => {
