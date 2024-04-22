@@ -10,6 +10,7 @@ const store = require("./store");
 const comm = require("./comm");
 const groups = require("./groups");
 const util = require("../util/util");
+const local = require("../local/local");
 const id = util.id;
 
 const mySid = id.getSID(global.nodeConfig);
@@ -49,12 +50,48 @@ function calcPeerNIDNodeMap(gid) {
     );
 }
 
+function mapInner(jobData, mapper, option) {
+  const { jobID, gid } = jobData;
+
+  return Promise.all([computeMap(gid, mapper), calcPeerNIDNodeMap(gid)]).then(
+    ([mapperRes, peerNIDNodeMap]) => {
+      const entries = Array.from(mapperRes.entries());
+      const peerNIDs = Array.from(peerNIDNodeMap.keys());
+      const storePromises = entries.map(([key, val]) => {
+        const entry = { [key]: val };
+
+        let destinationNode;
+        if (option.localStore) {
+          destinationNode = global.nodeConfig;
+        } else {
+          destinationNode = peerNIDNodeMap.get(
+            id.consistentHash(id.getID(key), peerNIDs),
+          );
+        }
+        assert(destinationNode);
+
+        const uniqueKey = id.getID(entry) + id.getSID(global.nodeConfig);
+        return comm.sendPromise(
+          [entry, { gid: `${gid}/map-${jobID}`, key: uniqueKey }],
+          {
+            node: destinationNode,
+            service: "store",
+            method: "put",
+          },
+        );
+      });
+      return Promise.all(storePromises);
+    },
+  );
+}
+
 /**
  * @param {MRJobMetadata} jobData
  * @param {Mapper} mapper
+ * @param {object} option
  * @param {Callback} callback
  */
-function map(jobData, mapper, callback = () => {}) {
+function map(jobData, mapper, option, callback = () => {}) {
   const { jobID, gid, supervisor } = jobData;
 
   Promise.all([computeMap(gid, mapper), calcPeerNIDNodeMap(gid)])
@@ -63,9 +100,14 @@ function map(jobData, mapper, callback = () => {}) {
       const peerNIDs = Array.from(peerNIDNodeMap.keys());
       const storePromises = entries.map(([key, val]) => {
         const entry = { [key]: val };
-        const destinationNode = peerNIDNodeMap.get(
-          id.consistentHash(id.getID(key), peerNIDs),
-        );
+        let destinationNode;
+        if (option.localStore) {
+          destinationNode = global.nodeConfig;
+        } else {
+          destinationNode = peerNIDNodeMap.get(
+            id.consistentHash(id.getID(key), peerNIDs),
+          );
+        }
         assert(destinationNode);
 
         const uniqueKey = id.getID(entry) + id.getSID(global.nodeConfig);

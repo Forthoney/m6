@@ -49,7 +49,7 @@ function startNodes(cb) {
 
 function doMapReduce() {
   distribution.crawl.store.getPromise(null).then((keys) => {
-    distribution.crawl.mr.exec({ keys, map, reduce, async: true }, (e, v) => {
+    distribution.crawl.mr.exec({ keys, map, reduce }, (e, v) => {
       console.error(e);
       assert(Object.values(e).length === 0);
       console.log("FINAL RESULT: ", v);

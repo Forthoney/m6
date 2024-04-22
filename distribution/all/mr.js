@@ -91,7 +91,7 @@ function mr(config) {
         };
         setupNotifyEndpoint(jobData, nodes.length, setting.reduce, callback);
 
-        distService.comm.send([jobData, setting.map], {
+        distService.comm.send([jobData, setting.map, setting], {
           service: "mr",
           method: "map",
         });
