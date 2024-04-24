@@ -50,9 +50,11 @@ function mr(config) {
             method: "reduce",
           })
           .then((results) => {
-            const promises = Object.values(results).map((key) =>
-              distService.store.getSubgroupPromise(key, `reduce-${jobID}`),
-            );
+            const promises = Object.values(results)
+              .filter((key) => key !== null)
+              .map((key) =>
+                distService.store.getSubgroupPromise(key, `reduce-${jobID}`),
+              );
             return Promise.all(promises);
           })
           .then((vals) => {
@@ -91,7 +93,7 @@ function mr(config) {
         };
         setupNotifyEndpoint(jobData, nodes.length, setting.reduce, callback);
 
-        distService.comm.send([jobData, setting.map, setting], {
+        distService.comm.send([jobData, setting], {
           service: "mr",
           method: "map",
         });

@@ -1,5 +1,9 @@
 global.nodeConfig = { ip: "127.0.0.1", port: 7070 };
+
 const assert = require("node:assert");
+const fs = require("node:fs");
+const path = require("node:path");
+
 const distribution = require("../distribution");
 const groupMaker = require("../distribution/all/groups");
 
@@ -37,33 +41,38 @@ const crawlGroup = {
   [id.getSID(n3)]: n3,
 };
 
-function startNodes(cb) {
-  distribution.local.status.spawn(n1, (e, v) => {
-    distribution.local.status.spawn(n2, (e, v) => {
-      distribution.local.status.spawn(n3, (e, v) => {
-        cb();
-      });
-    });
-  });
+function startNodes() {
+  return Promise.all(
+    Object.values(crawlGroup).map((n) =>
+      distribution.local.status.spawnPromise(n),
+    ),
+  );
 }
 
 function doMapReduce() {
   distribution.crawl.store.getPromise(null).then((keys) => {
-    distribution.crawl.mr.exec({ keys, map, reduce }, (e, v) => {
+    distribution.crawl.mr.exec({ keys, map, reduce, id: "crawler" }, (e, v) => {
       console.error(e);
       assert(Object.values(e).length === 0);
-      console.log("FINAL RESULT: ", v);
+      console.log("COMPLETE=========================");
     });
   });
 }
 
-const urls = [{ 0: "https://example.com" }];
+const urlsRaw = fs.readFileSync(
+  path.join(__dirname, "..", "data", "urls.txt"),
+  "utf8",
+);
+const urls = urlsRaw.split("\n").map((url, idx) => {
+  return { [idx]: url };
+});
+console.log(urls[0]);
 
 let localServer = null;
 distribution.node.start((server) => {
   localServer = server;
   const crawlConfig = { gid: "crawl" };
-  startNodes(() => {
+  startNodes().then(() => {
     groupMaker(crawlConfig).put(crawlConfig, crawlGroup, (e, v) => {
       assert(Object.values(e).length === 0);
       let counter = 0;
