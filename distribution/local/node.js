@@ -94,8 +94,8 @@ function start(onStart) {
         console.log(
           `[SERVER] (${nodeConfig.ip}:${nodeConfig.port})\n`,
           `Request: ${service}:${method}\n`,
-          `Args: ${JSON.stringify(jsBody)} 
-            ServiceCallback: ${serviceCallback}`,
+          // Takes too long to print on long bodies
+          // `Args: ${JSON.stringify(jsBody)} ServiceCallback: ${serviceCallback}`,
         );
 
         if (method in ser) {

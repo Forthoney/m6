@@ -6,6 +6,7 @@
 /** @typedef {import("../types").MapReduceJobMetadata} MRJobMetadata */
 
 const assert = require("node:assert");
+const path = require("node:path");
 const store = require("./store");
 const comm = require("./comm");
 const groups = require("./groups");
@@ -15,16 +16,15 @@ const id = util.id;
 
 const mySid = id.getSID(global.nodeConfig);
 
-function computeMap(gid, mapper) {
-  return store
-    .getPromise({ gid, key: null })
-    .then((keys) =>
-      Promise.all(
-        keys.map((key) =>
-          store.getPromise({ gid, key }).then((data) => mapper(key, data)),
-        ),
-      ),
-    )
+function computeMap(gid, targetKeys, mapper) {
+  const checkStore = targetKeys.map((key) =>
+    store
+      .getPromise({ gid, key })
+      .then((data) => mapper(key, data))
+      .catch((_) => []),
+  );
+
+  return Promise.all(checkStore)
     .then((results) => {
       const mapperRes = new Map();
 
@@ -38,7 +38,8 @@ function computeMap(gid, mapper) {
         });
       });
       return mapperRes;
-    });
+    })
+    .catch((e) => console.log(e));
 }
 
 function calcPeerNIDNodeMap(gid) {
@@ -50,58 +51,23 @@ function calcPeerNIDNodeMap(gid) {
     );
 }
 
-function mapInner(jobData, mapper, option) {
-  const { jobID, gid } = jobData;
-
-  return Promise.all([computeMap(gid, mapper), calcPeerNIDNodeMap(gid)]).then(
-    ([mapperRes, peerNIDNodeMap]) => {
-      const entries = Array.from(mapperRes.entries());
-      const peerNIDs = Array.from(peerNIDNodeMap.keys());
-      const storePromises = entries.map(([key, val]) => {
-        const entry = { [key]: val };
-
-        let destinationNode;
-        if (option.localStore) {
-          destinationNode = global.nodeConfig;
-        } else {
-          destinationNode = peerNIDNodeMap.get(
-            id.consistentHash(id.getID(key), peerNIDs),
-          );
-        }
-        assert(destinationNode);
-
-        const uniqueKey = id.getID(entry) + id.getSID(global.nodeConfig);
-        return comm.sendPromise(
-          [entry, { gid: `${gid}/map-${jobID}`, key: uniqueKey }],
-          {
-            node: destinationNode,
-            service: "store",
-            method: "put",
-          },
-        );
-      });
-      return Promise.all(storePromises);
-    },
-  );
-}
-
 /**
  * @param {MRJobMetadata} jobData
- * @param {Mapper} mapper
- * @param {object} option
+ * @param {object} setting
  * @param {Callback} callback
  */
-function map(jobData, mapper, option, callback = () => {}) {
+function map(jobData, setting, callback = () => {}) {
+  const { keys, map: mapper, localStore } = setting;
   const { jobID, gid, supervisor } = jobData;
 
-  Promise.all([computeMap(gid, mapper), calcPeerNIDNodeMap(gid)])
+  return Promise.all([computeMap(gid, keys, mapper), calcPeerNIDNodeMap(gid)])
     .then(([mapperRes, peerNIDNodeMap]) => {
       const entries = Array.from(mapperRes.entries());
       const peerNIDs = Array.from(peerNIDNodeMap.keys());
       const storePromises = entries.map(([key, val]) => {
         const entry = { [key]: val };
         let destinationNode;
-        if (option.localStore) {
+        if (localStore) {
           destinationNode = global.nodeConfig;
         } else {
           destinationNode = peerNIDNodeMap.get(
@@ -153,33 +119,37 @@ function reduceOnMapResults(mapResults, reducer) {
  */
 function reduce(jobData, reducer, callback = () => {}) {
   const { gid, jobID } = jobData;
-  Promise.all([
+  return Promise.all([
     store.getAllPromise(`${gid}/map-${jobID}`),
     calcPeerNIDNodeMap(gid),
   ])
     .then(([mapResults, peerNIDNodeMap]) => {
       assert(mapResults);
-      const key = jobID + mySid;
+      if (mapResults.length !== 0) {
+        const key = jobID + mySid;
 
-      const peerNIDs = Array.from(peerNIDNodeMap.keys());
-      const destinationNID = id.consistentHash(id.getID(key), peerNIDs);
-      const destinationNode = peerNIDNodeMap.get(destinationNID);
-      assert(destinationNode);
-      const remote = {
-        node: destinationNode,
-        service: "store",
-        method: "put",
-      };
+        const peerNIDs = Array.from(peerNIDNodeMap.keys());
+        const destinationNID = id.consistentHash(id.getID(key), peerNIDs);
+        const destinationNode = peerNIDNodeMap.get(destinationNID);
+        assert(destinationNode);
+        const remote = {
+          node: destinationNode,
+          service: "store",
+          method: "put",
+        };
 
-      const reduceResult = reduceOnMapResults(mapResults, reducer);
+        const reduceResult = reduceOnMapResults(mapResults, reducer);
 
-      return new Promise((resolve, reject) => {
-        comm.send(
-          [reduceResult, { gid: `${gid}/reduce-${jobID}`, key }],
-          remote,
-          (e, _) => (e ? reject(e) : resolve(key)),
-        );
-      });
+        return new Promise((resolve, reject) => {
+          comm.send(
+            [reduceResult, { gid: `${gid}/reduce-${jobID}`, key }],
+            remote,
+            (e, _) => (e ? reject(e) : resolve(key)),
+          );
+        });
+      } else {
+        return null;
+      }
     })
     .then((key) => callback(null, key))
     .catch((e) => callback(e));
