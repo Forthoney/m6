@@ -122,6 +122,69 @@ function store(config) {
     });
   }
 
+  /**
+ * Performs a distributed query across all nodes in the group, aggregates results,
+ * combines counts for identical URLs, and sorts them by count.
+ * @param {string} searchTerm - The term to query.
+ * @param {string[]} includeURLs - URLs to include in the results.
+ * @param {string[]} excludeURLs - URLs to exclude from the results.
+ * @param {number} maxResults - Maximum number of result URLs to return.
+ * @param {Callback} callback - Callback to handle the response or error.
+ * @return {void}
+ */
+  function query(searchTerm, includeURLs, excludeURLs, maxResults, callback) {
+    local.groups.get(context.gid, async (err, group) => {
+      if (err) return callback(err);
+
+      // Collect promises to execute queries on each node
+      const queryPromises = Object.values(group).map(node => {
+        return new Promise((resolve, reject) => {
+          const remote = {
+            service: "store",
+            method: "query",
+            node: node
+          };
+          local.comm.send([searchTerm, includeURLs, excludeURLs], remote, (e, result) => {
+            if (e) {
+              reject(e);
+            } else {
+              resolve(result);
+            }
+          });
+        });
+      });
+
+      // Wait for all queries to complete.
+      try {
+        const results = await Promise.all(queryPromises);
+        const urlCounts = {};
+
+        // Aggregate counts
+        results.forEach(nodeResults => {
+          nodeResults.forEach(item => {
+            if (!urlCounts[item.url]) {
+              urlCounts[item.url] = 0;
+            }
+            urlCounts[item.url] += item.count;
+          });
+        });
+
+        // Convert the aggregated results into an array and sort by count.
+        const sortedUrls = Object.keys(urlCounts)
+          .map(url => ({ url, count: urlCounts[url] }))
+          .sort((a, b) => b.count - a.count);
+
+        if (sortedUrls.length === 0) {
+          callback(null, null); // No results found
+        } else {
+          callback(null, sortedUrls.slice(0, maxResults)); // Return top results based on maxResults.
+        }
+      } catch (error) {
+        callback(error);
+      }
+    });
+  }
+
   // TODO: Delete moved key-value pairs.
   // TODO: Reconf any values that need to be moved between nodes that WEREN'T REMOVED.
   // TODO: Why the difference in expected vs real node assignments?
@@ -247,6 +310,7 @@ function store(config) {
     get,
     put,
     del,
+    query,
     delGroup,
     reconf,
     getPromise: promisify(get),
