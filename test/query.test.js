@@ -145,13 +145,15 @@ afterAll((done) => {
 
 
 
-test('Query test', (done) => {
-  distribution.mygroup.store.query("0", [], [], 1, (e, v) => {
+test('Query for all sites with 0', (done) => {
+  distribution.mygroup.store.query("0", [], [], 10, (e, v) => {
     try {
-      console.log("Error recieved intest: ", e);
       expect(e).toBeFalsy();
-      console.log("Value recieved intest: ", v);
-      expect(v).toEqual([]);
+      expect(v).toEqual(["https://stackoverflow.com/questions/59147944/how-to-provide-accessibility-permissions-to-swift-apps-in-development",
+      "https://www.github.com",
+      "https://stackoverflow.com/questions/59147944/how-to-provide-accessibility-permissions-to-swift-apps-in-development",
+      "https://www.w3schools.com/html/default.asp",
+      ]);
       done();
     } catch (error) {
       done(error);
