@@ -159,30 +159,33 @@ function store(config) {
         const results = await Promise.all(queryPromises);
         const urlCounts = {};
 
-        // Aggregate counts
-        results.forEach(nodeResults => {
-          nodeResults.forEach(item => {
+      // Aggregate counts
+      results.forEach(nodeResults => {
+        nodeResults.forEach(item => {
+          if (item && item.url) {
             if (!urlCounts[item.url]) {
               urlCounts[item.url] = 0;
             }
             urlCounts[item.url] += item.count;
-          });
+          }
         });
+      });
 
-        // Convert the aggregated results into an array and sort by count.
-        const sortedUrls = Object.keys(urlCounts)
-          .map(url => ({ url, count: urlCounts[url] }))
-          .sort((a, b) => b.count - a.count);
+      // Convert the aggregated results into an array, sort by count, and then map to just URLs
+      const sortedUrls = Object.keys(urlCounts)
+        .map(url => ({ url, count: urlCounts[url] }))
+        .sort((a, b) => b.count - a.count)
+        .map(item => item.url); // Extract only the URL, discard the count
 
-        if (sortedUrls.length === 0) {
-          callback(null, null); // No results found
-        } else {
-          callback(null, sortedUrls.slice(0, maxResults)); // Return top results based on maxResults.
-        }
-      } catch (error) {
-        callback(error);
+      if (sortedUrls.length === 0) {
+        callback(null, null); // No results found
+      } else {
+        callback(null, sortedUrls.slice(0, maxResults)); // Return top results based on maxResults
       }
-    });
+    } catch (error) {
+      callback(error);
+    }
+  });
   }
 
   // TODO: Delete moved key-value pairs.
