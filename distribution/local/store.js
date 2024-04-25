@@ -122,7 +122,7 @@ function get(key, callback = () => {}) {
  * @return {void}
  */
 function query(searchTerm, includeURLs, excludeURLs, callback = () => {}) {
-  const indexPath = path.join(__dirname, "..", 'test', 'index.json');
+  const indexPath = path.join(__dirname, "../..", 'test', 'index.json');
 
   fs.readFile(indexPath, 'utf8', (err, data) => {
     if (err) {
