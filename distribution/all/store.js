@@ -183,6 +183,7 @@ function store(config) {
         callback(null, sortedUrls.slice(0, maxResults)); // Return top results based on maxResults
       }
     } catch (error) {
+      console.log("Returning error!")
       callback(error);
     }
   });

@@ -154,7 +154,6 @@ test('Query for all sites with 0', (done) => {
       "https://stackoverflow.com/questions/59147944/how-to-provide-accessibility-permissions-to-swift-apps-in-development",
       "https://www.w3schools.com/html/default.asp",
       ]);
-      done();
     } catch (error) {
       done(error);
     }
