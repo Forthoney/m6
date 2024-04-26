@@ -217,7 +217,7 @@ test('Query for all sites with not included term', (done) => {
 });
 
 test('Repeated Query Performance Test', (done) => {
-  const numberOfQueries = 100;
+  const numberOfQueries = 500;
   let times = []; // Array to store the time taken for each query
 
   const runQuery = (index) => {
