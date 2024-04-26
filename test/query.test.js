@@ -215,3 +215,31 @@ test('Query for all sites with not included term', (done) => {
     }
   });
 });
+
+test('Repeated Query Performance Test', (done) => {
+  const numberOfQueries = 50;
+  let times = []; // Array to store the time taken for each query
+
+  const runQuery = (index) => {
+    if (index >= numberOfQueries) {
+      // Once all queries are done, calculate the average time and log it
+      const averageTime = times.reduce((sum, current) => sum + current, 0) / times.length;
+      console.log(`Average query time for ${numberOfQueries} queries: ${averageTime} ms`);
+      done();
+      return;
+    }
+
+    const startTime = Date.now(); // Start timing
+
+    distribution.mygroup.store.query("0", [], [], 10, (e, v) => {
+      const endTime = Date.now(); // End timing
+      times.push(endTime - startTime); // Calculate and store the duration
+
+      // Run the next query
+      runQuery(index + 1);
+    });
+  };
+
+  // Start the first query
+  runQuery(0);
+});
