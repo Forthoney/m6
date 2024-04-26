@@ -216,26 +216,21 @@ test('Query for all sites with not included term', (done) => {
   });
 });
 
-test('Repeated Query Performance Test', (done) => {
+test('Repeated Query Total Performance Test', (done) => {
   const numberOfQueries = 500;
-  let times = []; // Array to store the time taken for each query
+  const startTime = Date.now(); // Start timing before the first query
 
   const runQuery = (index) => {
     if (index >= numberOfQueries) {
-      // Once all queries are done, calculate the average time and log it
-      const averageTime = times.reduce((sum, current) => sum + current, 0) / times.length;
-      console.log(`Average query time for ${numberOfQueries} queries: ${averageTime} ms`);
+      const endTime = Date.now(); // End timing after the last query
+      const totalTime = endTime - startTime; // Calculate total duration
+      console.log(`Total time for ${numberOfQueries} queries: ${totalTime} ms`);
       done();
       return;
     }
 
-    const startTime = Date.now(); // Start timing
-
     distribution.mygroup.store.query("0", [], [], 10, (e, v) => {
-      const endTime = Date.now(); // End timing
-      times.push(endTime - startTime); // Calculate and store the duration
-
-      // Run the next query
+      // Immediately start the next query without waiting
       runQuery(index + 1);
     });
   };
