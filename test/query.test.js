@@ -160,3 +160,44 @@ test('Query for all sites with 0', (done) => {
     }
   });
 });
+
+test('Query for some sites with 0', (done) => {
+  distribution.mygroup.store.query("0", [], [], 1, (e, v) => {
+    try {
+      expect(e).toBeFalsy();
+      expect(v).toEqual([
+      "https://www.github.com",
+      ]);
+      done();
+    } catch (error) {
+      done(error);
+    }
+  });
+});
+
+test('Test exclude list', (done) => {
+  distribution.mygroup.store.query("0", [], ["https://www.github.com"], 10, (e, v) => {
+    try {
+      expect(e).toBeFalsy();
+      expect(v).toEqual([
+      "https://stackoverflow.com/questions/59147944/how-to-provide-accessibility-permissions-to-swift-apps-in-development",
+      "https://www.w3schools.com/html/default.asp",
+      ]);
+      done();
+    } catch (error) {
+      done(error);
+    }
+  });
+});
+
+test('Query for all sites with not included term', (done) => {
+  distribution.mygroup.store.query("wahahahahahahahah", [], [], 10, (e, v) => {
+    try {
+      expect(e).toBeFalsy();
+      expect(v).toEqual([]);
+      done();
+    } catch (error) {
+      done(error);
+    }
+  });
+});
