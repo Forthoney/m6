@@ -211,7 +211,7 @@ test('(2 pts) all.store.reconf(naiveHash)', (done) => {
   // This function will be called after we put items in nodes
   const checkPlacement = (e, v) => {
     try {
-      const remote = {node: n6, service: 'store', method: 'get'};
+      const remote = {node: n4, service: 'store', method: 'get'};
       const messages = [
         [{key: keys[0], gid: 'group1'}],
         [{key: keys[1], gid: 'group1'}],
