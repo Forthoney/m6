@@ -175,6 +175,20 @@ test('Query for some sites with 0', (done) => {
   });
 });
 
+test('Test include list', (done) => {
+  distribution.mygroup.store.query("0", ["https://www.github.com"], [], 5, (e, v) => {
+    try {
+      expect(e).toBeFalsy();
+      expect(v).toEqual([
+      "https://www.github.com",
+      ]);
+      done();
+    } catch (error) {
+      done(error);
+    }
+  });
+});
+
 test('Test exclude list', (done) => {
   distribution.mygroup.store.query("0", [], ["https://www.github.com"], 10, (e, v) => {
     try {
