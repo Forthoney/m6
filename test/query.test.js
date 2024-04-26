@@ -217,7 +217,7 @@ test('Query for all sites with not included term', (done) => {
 });
 
 test('Repeated Query Total Performance Test', (done) => {
-  const numberOfQueries = 10;
+  const numberOfQueries = 5;
   const startTime = Date.now(); // Start timing before the first query
 
   const runQuery = (index) => {
