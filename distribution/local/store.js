@@ -138,7 +138,7 @@ function query(searchTerm, includeURLs, excludeURLs, callback = () => {}) {
 
     const results = index[searchTerm];
     if (!results) {
-      return callback(null, null);  // Return null if no term matches.
+      return callback(null, []);  // Return null if no term matches.
     }
 
     // First apply the include filter
