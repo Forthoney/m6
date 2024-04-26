@@ -178,7 +178,7 @@ function store(config) {
         .map(item => item.url); // Extract only the URL, discard the count
 
       if (sortedUrls.length === 0) {
-        callback(null, null); // No results found
+        callback(null, []); // No results found
       } else {
         callback(null, sortedUrls.slice(0, maxResults)); // Return top results based on maxResults
       }
