@@ -48,8 +48,8 @@ if (args.crawl) {
     const crawlGroup = { ip: "172.31.20.108", port: 7070 };
     const crawlConfig = { gid: "crawl" };
     const { seed } = require("./scripts/seed");
-    const groupMaker = require("./distribution/all/groups")(crawlConfig);
-    groupMaker(crawlConfig).put(crawlConfig, crawlGroup, (e, v) => {
+    const group = require("./distribution/all/groups")(crawlConfig);
+    group.put(crawlConfig, crawlGroup, (e, v) => {
       seed(() => getURLs());
     });
   };
