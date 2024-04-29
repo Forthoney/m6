@@ -133,7 +133,4 @@ function start(callback) {
   });
 }
 
-module.exports = {
-  start,
-  startPromise: promisify(start),
-};
+module.exports = { start };

@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 
-const util = require("./distribution/util/util.js");
-const { getURLs } = require("./scripts/getURLs.js");
 const args = require("yargs").argv;
 
 // Default configuration
