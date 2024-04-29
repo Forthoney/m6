@@ -19,7 +19,6 @@ fs.mkdirSync(storeDirpath, { recursive: true });
 
 /** @typedef {string} LocalKey */
 
-
 /**
  * @typedef {Object} GroupKey
  * @property {string} gid
@@ -123,13 +122,26 @@ function get(key, callback = () => {}) {
       if (nestedKey["folder"] != null) {
         // Nested lookup
         if (nestedKey["key"] == null) {
-          if (fs.existsSync(path.join(storeDirpath, key.gid, nestedKey["folder"]))) {
-            return readDir(path.join(storeDirpath, key.gid, nestedKey["folder"]), callback);
+          if (
+            fs.existsSync(path.join(storeDirpath, key.gid, nestedKey["folder"]))
+          ) {
+            return readDir(
+              path.join(storeDirpath, key.gid, nestedKey["folder"]),
+              callback,
+            );
           } else {
             return callback(null, []);
           }
         } else {
-          return readFile(path.join(storeDirpath, key.gid, nestedKey["folder"], nestedKey["key"]), callback);
+          return readFile(
+            path.join(
+              storeDirpath,
+              key.gid,
+              nestedKey["folder"],
+              nestedKey["key"],
+            ),
+            callback,
+          );
         }
       } else {
         return readFile(path.join(storeDirpath, key.gid, key.key), callback);
@@ -247,4 +259,5 @@ module.exports = {
   delGroup,
   getPromise: promisify(get),
   getAllPromise: promisify(getAll),
+  putPromise: promisify(put),
 };

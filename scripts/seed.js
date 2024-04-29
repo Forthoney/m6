@@ -1,7 +1,6 @@
 global.nodeConfig = { ip: "127.0.0.1", port: 7070 };
 
 const assert = require("node:assert");
-const { PerformanceObserver, performance } = require("node:perf_hooks");
 const fs = require("node:fs");
 const path = require("node:path");
 
@@ -28,12 +27,8 @@ function map(_key, vUrl) {
   });
 }
 
-function reduce(kUrl, vData) {
-  return { [kUrl]: vData };
-}
-
 crawlGroup = {};
-for (let i = 0; i < 10; i++) {
+for (let i = 0; i < 500; i++) {
   const node = { ip: "127.0.0.1", port: 7110 + i };
   crawlGroup[id.getSID(node)] = node;
 }
@@ -46,21 +41,16 @@ function startNodes() {
   );
 }
 
-const obs = new PerformanceObserver((items) => {
-  console.log(items.getEntries());
-  performance.clearMarks();
-});
-
 function doMapReduce() {
   performance.mark("mr-setup");
   distribution.crawl.store.getPromise(null).then((keys) => {
-    distribution.crawl.mr.exec({ keys, map, reduce, id: "crawler" }, (e, v) => {
-      performance.measure("MR end to end", "mr-setup");
-      console.error(e);
-      assert(Object.values(e).length === 0);
-      console.log(v.length);
-      console.log("COMPLETE=========================");
-    });
+    distribution.crawl.mr.exec(
+      { keys, map, id: "crawler", storeLocally: true },
+      (e, v) => {
+        assert(Object.values(e).length === 0);
+        console.log("COMPLETE=========================");
+      },
+    );
   });
 }
 
@@ -75,14 +65,11 @@ console.log(urls[0]);
 
 let localServer = null;
 
-obs.observe({ type: "measure" });
-
 distribution.node.start((server) => {
   localServer = server;
   const crawlConfig = { gid: "crawl" };
   startNodes().then(() => {
     groupMaker(crawlConfig).put(crawlConfig, crawlGroup, (e, v) => {
-      performance.measure("Start to group creation");
       assert(Object.values(e).length === 0);
       let counter = 0;
       urls.forEach((url) => {

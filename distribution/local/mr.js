@@ -6,12 +6,10 @@
 /** @typedef {import("../types").MapReduceJobMetadata} MRJobMetadata */
 
 const assert = require("node:assert");
-const path = require("node:path");
 const store = require("./store");
 const comm = require("./comm");
 const groups = require("./groups");
 const util = require("../util/util");
-const local = require("../local/local");
 const id = util.id;
 
 const mySid = id.getSID(global.nodeConfig);
@@ -57,7 +55,7 @@ function calcPeerNIDNodeMap(gid) {
  * @param {Callback} callback
  */
 function map(jobData, setting, callback = () => {}) {
-  const { keys, map: mapper, localStore } = setting;
+  const { keys, map: mapper, storeLocally } = setting;
   const { jobID, gid, supervisor } = jobData;
 
   return Promise.all([computeMap(gid, keys, mapper), calcPeerNIDNodeMap(gid)])
@@ -66,25 +64,25 @@ function map(jobData, setting, callback = () => {}) {
       const peerNIDs = Array.from(peerNIDNodeMap.keys());
       const storePromises = entries.map(([key, val]) => {
         const entry = { [key]: val };
-        let destinationNode;
-        if (localStore) {
-          destinationNode = global.nodeConfig;
+        const uniqueKey = id.getID(entry) + id.getSID(global.nodeConfig);
+        const fullKey = { gid: `${gid}/map-${jobID}`, key: uniqueKey };
+        if (storeLocally) {
+          return store.putPromise(entry, fullKey);
         } else {
-          destinationNode = peerNIDNodeMap.get(
+          const destinationNode = peerNIDNodeMap.get(
             id.consistentHash(id.getID(key), peerNIDs),
           );
-        }
-        assert(destinationNode);
+          assert(destinationNode);
 
-        const uniqueKey = id.getID(entry) + id.getSID(global.nodeConfig);
-        return comm.sendPromise(
-          [entry, { gid: `${gid}/map-${jobID}`, key: uniqueKey }],
-          {
-            node: destinationNode,
-            service: "store",
-            method: "put",
-          },
-        );
+          return comm.sendPromise(
+            [entry, { gid: `${gid}/map-${jobID}`, key: uniqueKey }],
+            {
+              node: destinationNode,
+              service: "store",
+              method: "put",
+            },
+          );
+        }
       });
       return Promise.all(storePromises);
     })
