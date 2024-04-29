@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const util = require("./distribution/util/util.js");
+const { getURLs } = require("./scripts/getURLs.js");
 const args = require("yargs").argv;
 
 // Default configuration
@@ -25,17 +26,6 @@ if (args.port) {
   global.nodeConfig.port = parseInt(args.port);
 }
 
-if (args.config) {
-  let nodeConfig = util.deserialize(args.config);
-  global.nodeConfig.ip = nodeConfig.ip ? nodeConfig.ip : global.nodeConfig.ip;
-  global.nodeConfig.port = nodeConfig.port
-    ? nodeConfig.port
-    : global.nodeConfig.port;
-  global.nodeConfig.onStart = nodeConfig.onStart
-    ? nodeConfig.onStart
-    : global.nodeConfig.onStart;
-}
-
 const distribution = {
   util: require("./distribution/util/util.js"),
   local: require("./distribution/local/local.js"),
@@ -54,6 +44,18 @@ Object.assign(global.distribution.all, {
   mem: require("./distribution/all/mem.js")({ gid: "all" }),
   store: require("./distribution/all/store.js")({ gid: "all" }),
 });
+
+if (args.crawl) {
+  global.nodeConfig.onStart = () => {
+    const crawlGroup = { ip: "172.31.20.108", port: 7070 };
+    const crawlConfig = { gid: "crawl" };
+    const { seed } = require("./scripts/seed");
+    const groupMaker = require("./distribution/all/groups")(crawlConfig);
+    groupMaker(crawlConfig).put(crawlConfig, crawlGroup, (e, v) => {
+      seed(() => getURLs());
+    });
+  };
+}
 
 module.exports = global.distribution;
 

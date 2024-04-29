@@ -13,19 +13,16 @@ function map(_key, urls) {
   const assert = require("node:assert");
 
   const fetchPromises = urls.map((url) => {
-    assert(Object.keys(url).length === 1);
-    const targetURL = Object.keys(url)[0];
-
     return new Promise((resolve, reject) => {
       try {
-        new URL(targetURL);
+        new URL(url);
       } catch (e) {
         return reject(e);
       }
 
       let data = "";
       https
-        .get(targetURL, (res) => {
+        .get(url, (res) => {
           const { statusCode } = res;
           if (statusCode !== 200) {
             res.resume();
@@ -35,29 +32,28 @@ function map(_key, urls) {
           }
           res.on("data", (chunk) => (data += chunk));
           res.on("end", () => {
-            resolve({ [targetURL]: data });
+            resolve({ [url]: data });
           });
         })
-        .on("error", (e) => {
-          reject(e);
-        });
+        .on("error", (e) => reject(e));
     });
   });
-  return Promise.allSettled(fetchPromises)
-    .then((results) => {
-      const body = {};
-      results.forEach((res) => {
-        if (res.status === "fulfilled") {
-          Object.assign(body, res.value);
-        }
-      });
-      return body;
-    })
-    .catch((e) => console.log(e));
+  return Promise.allSettled(fetchPromises).then((results) => {
+    const body = {};
+    results.forEach((res) => {
+      if (res.status === "fulfilled") {
+        Object.assign(body, res.value);
+      } else {
+        console.log(urls);
+        console.log(res.reason);
+      }
+    });
+    return body;
+  });
 }
 
 const crawlGroup = {};
-for (let i = 0; i < 20; i++) {
+for (let i = 0; i < 500; i++) {
   const node = { ip: "127.0.0.1", port: 7110 + i };
   crawlGroup[id.getSID(node)] = node;
 }
