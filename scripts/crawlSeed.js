@@ -1,6 +1,7 @@
 global.nodeConfig = { ip: "127.0.0.1", port: 7070 };
 
 const assert = require("node:assert");
+const { PerformanceObserver, performance } = require("node:perf_hooks");
 const fs = require("node:fs");
 const path = require("node:path");
 
@@ -31,7 +32,7 @@ function reduce(kUrl, vData) {
   return { [kUrl]: vData };
 }
 
-const crawlGroup = {};
+crawlGroup = {};
 for (let i = 0; i < 10; i++) {
   const node = { ip: "127.0.0.1", port: 7110 + i };
   crawlGroup[id.getSID(node)] = node;
@@ -45,29 +46,52 @@ function startNodes() {
   );
 }
 
+const obs = new PerformanceObserver((items) => {
+  console.log(items.getEntries());
+  performance.clearMarks();
+});
+
 function doMapReduce() {
-  distribution.crawl.store
-    .getSubgroupPromise(null, "reduce-getURLs")
-    .then((keys) => {
-      const subgroupKeys = keys.map((k) => `reduce-getURLs/${k}`);
-      distribution.crawl.mr.exec(
-        { keys: subgroupKeys, map, reduce, id: "crawl2" },
-        (e, v) => {
-          console.error(e);
-          assert(Object.values(e).length === 0);
-          console.log("COMPLETE=========================");
-        },
-      );
+  performance.mark("mr-setup");
+  distribution.crawl.store.getPromise(null).then((keys) => {
+    distribution.crawl.mr.exec({ keys, map, reduce, id: "crawler" }, (e, v) => {
+      performance.measure("MR end to end", "mr-setup");
+      console.error(e);
+      assert(Object.values(e).length === 0);
+      console.log("COMPLETE=========================");
     });
+  });
 }
 
+const urlsRaw = fs.readFileSync(
+  path.join(__dirname, "..", "data", "urls.txt"),
+  "utf8",
+);
+const urls = urlsRaw.split("\n").map((url, idx) => {
+  return { [idx]: url };
+});
+console.log(urls[0]);
+
 let localServer = null;
+
+obs.observe({ type: "measure" });
+
 distribution.node.start((server) => {
   localServer = server;
   const crawlConfig = { gid: "crawl" };
   startNodes().then(() => {
     groupMaker(crawlConfig).put(crawlConfig, crawlGroup, (e, v) => {
-      doMapReduce();
+      performance.measure("Start to group creation");
+      assert(Object.values(e).length === 0);
+      let counter = 0;
+      urls.forEach((url) => {
+        const [key, val] = Object.entries(url)[0];
+        distribution.crawl.store.put(val, key, (e, v) => {
+          if (++counter == urls.length) {
+            doMapReduce();
+          }
+        });
+      });
     });
   });
 });
