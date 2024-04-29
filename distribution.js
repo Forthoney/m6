@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+const id = require("./distribution/util/id");
 const args = require("yargs").argv;
 
 // Default configuration
@@ -45,7 +46,8 @@ Object.assign(global.distribution.all, {
 
 if (args.crawl) {
   global.nodeConfig.onStart = () => {
-    const crawlGroup = { ip: "172.31.20.108", port: 7070 };
+    const n1 = { ip: "172.31.20.108", port: 7070 };
+    const crawlGroup = { [id.getSID(n1)]: n1 };
     const crawlConfig = { gid: "crawl" };
     const { seed } = require("./scripts/seed");
     const group = require("./distribution/all/groups")(crawlConfig);
