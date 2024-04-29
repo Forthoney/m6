@@ -19,9 +19,17 @@ fs.mkdirSync(storeDirpath, { recursive: true });
 
 /** @typedef {string} LocalKey */
 
+
 /**
  * @typedef {Object} GroupKey
  * @property {string} gid
+ * @property {?LocalKey} key
+ */
+
+/**
+ * @typedef {Object} NestedGroupKey
+ * @property {string} gid
+ * @property {?string} folder
  * @property {?LocalKey} key
  */
 
@@ -92,7 +100,7 @@ function readFile(path, callback) {
 }
 
 /**
- * @param {?LocalKey | GroupKey} key
+ * @param {?LocalKey | ?NestedGroupKey | ?GroupKey} key
  * @param {Callback} callback
  * @return {void}
  */
@@ -111,7 +119,21 @@ function get(key, callback = () => {}) {
         }
       });
     } else {
-      return readFile(path.join(storeDirpath, key.gid, key.key), callback);
+      const nestedKey = key.key;
+      if (nestedKey["folder"] != null) {
+        // Nested lookup
+        if (nestedKey["key"] == null) {
+          if (fs.existsSync(path.join(storeDirpath, key.gid, nestedKey["folder"]))) {
+            return readDir(path.join(storeDirpath, key.gid, nestedKey["folder"]), callback);
+          } else {
+            return callback(null, []);
+          }
+        } else {
+          return readFile(path.join(storeDirpath, key.gid, nestedKey["folder"], nestedKey["key"]), callback);
+        }
+      } else {
+        return readFile(path.join(storeDirpath, key.gid, key.key), callback);
+      }
     }
   }
 }
