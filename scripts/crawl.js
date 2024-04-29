@@ -10,9 +10,10 @@ const groupMaker = require("../distribution/all/groups");
 const id = distribution.util.id;
 
 function map(_key, vUrl) {
+  const https = require("node:https");
+
   return new Promise((resolve, reject) => {
     let data = "";
-    const https = require("node:https");
     https
       .get(vUrl, (res) => {
         const { statusCode } = res;

@@ -58,6 +58,7 @@ function doMapReduce() {
       performance.measure("MR end to end", "mr-setup");
       console.error(e);
       assert(Object.values(e).length === 0);
+      console.log(v.length);
       console.log("COMPLETE=========================");
     });
   });
