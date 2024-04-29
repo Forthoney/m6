@@ -40,13 +40,16 @@ function send(message, remote, callback = () => {}) {
     });
   });
 
+  const serialized = serialization.serialize(message);
+
   req.on("error", (e) => {
     const err = `${e.message}: sending ${message} to ${remote.node.ip}:${remote.node.port}`;
     console.log(err);
+    console.log(serialized.length);
     callback(Error(err));
   });
 
-  req.write(serialization.serialize(message));
+  req.write(serialized);
   req.end();
 }
 

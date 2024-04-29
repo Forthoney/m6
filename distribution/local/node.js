@@ -3,6 +3,7 @@ const url = require("url");
 
 let local = require("../local/local");
 const serialization = require("../util/serialization");
+const { promisify } = require("util");
 
 /*
     The start function will be called to start your node.
@@ -23,7 +24,7 @@ function isValidBody(body) {
   }
 }
 
-function start(onStart) {
+function start(callback) {
   const nodeConfig = global.nodeConfig;
   const server = http.createServer((req, res) => {
     /* Your server will be listening for PUT requests. */
@@ -128,10 +129,11 @@ function start(onStart) {
     if (process.send !== undefined) {
       process.send("spawned node running");
     }
-    onStart(server);
+    callback(server);
   });
 }
 
 module.exports = {
-  start: start,
+  start,
+  startPromise: promisify(start),
 };

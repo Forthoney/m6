@@ -26,26 +26,33 @@ function mr(config) {
    * trigger the reduce phase
    * @param {MRJobMetadata} jobData
    * @param {number} numNotify
-   * @param {Reducer} reducer
+   * @param {object} setting
    * @param {Callback} callback
    * @return {void}
    */
-  function setupNotifyEndpoint(jobData, numNotify, reducer, callback) {
+  function setupNotifyEndpoint(jobData, numNotify, setting, callback) {
+    const { reduce } = setting;
     const { jobID } = jobData;
     let completed = 0;
     const errors = [];
     const notify = (err) => {
+      console.log("COMPLETED", completed + 1);
       if (err) {
         errors.push(err);
       }
 
       if (++completed == numNotify) {
         if (errors.length > 0) {
-          return callback(err);
+          return callback(errors);
+        }
+
+        console.log("notified");
+        if (!reduce) {
+          return callback(errors, "Finished");
         }
 
         distService.comm
-          .sendPromise([jobData, reducer], {
+          .sendPromise([jobData, reduce], {
             service: "mr",
             method: "reduce",
           })
@@ -62,7 +69,6 @@ function mr(config) {
               .flat()
               .filter((v) => Object.keys(v).length > 0);
             callback({}, mergeResults);
-            // return distService.store.delGroupPromise(jobData.jobID);
           })
           .catch((e) => callback(e));
       }
@@ -77,9 +83,6 @@ function mr(config) {
    * @return {void}
    */
   function exec(setting, callback = () => {}) {
-    if (setting.map == null || setting.reduce == null) {
-      return callback(Error("Did not supply mapper or reducer"), null);
-    }
     local.groups
       .getPromise(context.gid)
       .then((group) => {
@@ -91,7 +94,7 @@ function mr(config) {
           supervisor: global.nodeConfig,
           jobID: jobID,
         };
-        setupNotifyEndpoint(jobData, nodes.length, setting.reduce, callback);
+        setupNotifyEndpoint(jobData, nodes.length, setting, callback);
 
         distService.comm.send([jobData, setting], {
           service: "mr",
