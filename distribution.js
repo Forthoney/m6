@@ -42,6 +42,7 @@ Object.assign(global.distribution.all, {
   routes: require("./distribution/all/routes.js")({ gid: "all" }),
   mem: require("./distribution/all/mem.js")({ gid: "all" }),
   store: require("./distribution/all/store.js")({ gid: "all" }),
+  mr: require("./distribution/all/mr.js")({ gid: "all" }),
 });
 
 if (args.crawl) {

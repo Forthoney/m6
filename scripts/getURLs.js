@@ -1,4 +1,3 @@
-global.nodeConfig = { ip: "127.0.0.1", port: 7070 };
 const assert = require("node:assert");
 const distribution = require("../distribution");
 const groupMaker = require("../distribution/all/groups");
