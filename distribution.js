@@ -75,6 +75,32 @@ if (args.crawl) {
   };
 }
 
+if (args.crawl2) {
+  global.nodeConfig.onStart = () => {
+    const nodes = [
+      { ip: "172.31.27.16", port: 7090 },
+      { ip: "172.31.24.189", port: 7090 },
+      { ip: "172.31.31.146", port: 7090 },
+      { ip: "172.31.27.16", port: 7080 },
+      { ip: "172.31.24.189", port: 7080 },
+      { ip: "172.31.31.146", port: 7080 },
+      { ip: "172.31.27.16", port: 7070 },
+      { ip: "172.31.24.189", port: 7070 },
+      { ip: "172.31.31.146", port: 7070 },
+    ];
+    const crawlGroup = {};
+    for (const n of nodes) {
+      crawlGroup[id.getSID(n)] = n;
+    }
+    const crawlConfig = { gid: "crawl" };
+    const { crawl } = require("./scripts/crawl.js");
+    const group = require("./distribution/all/groups")(crawlConfig);
+    group.put(crawlConfig, crawlGroup, (e, v) => {
+      crawl();
+    });
+  };
+}
+
 module.exports = global.distribution;
 
 /* The following code is run when distribution.js is run directly */
