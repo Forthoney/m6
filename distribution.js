@@ -48,6 +48,12 @@ Object.assign(global.distribution.all, {
 if (args.crawl) {
   global.nodeConfig.onStart = () => {
     const nodes = [
+      { ip: "172.31.27.16", port: 7090 },
+      { ip: "172.31.24.189", port: 7090 },
+      { ip: "172.31.31.146", port: 7090 },
+      { ip: "172.31.27.16", port: 7080 },
+      { ip: "172.31.24.189", port: 7080 },
+      { ip: "172.31.31.146", port: 7080 },
       { ip: "172.31.27.16", port: 7070 },
       { ip: "172.31.24.189", port: 7070 },
       { ip: "172.31.31.146", port: 7070 },
