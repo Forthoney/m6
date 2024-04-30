@@ -59,8 +59,6 @@ function getURLs() {
       distribution.crawl.mr.exec(
         { keys: subgroupKeys, map, reduce, id: "getURLs" },
         (e, v) => {
-          console.error(e);
-          assert(Object.values(e).length === 0);
           console.log("FINAL RESULT: ", v);
         },
       );

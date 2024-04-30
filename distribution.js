@@ -50,9 +50,13 @@ if (args.crawl) {
     const crawlGroup = { [id.getSID(n1)]: n1 };
     const crawlConfig = { gid: "crawl" };
     const { seed } = require("./scripts/seed");
+    const { getURLs } = require("./scripts/getURLs.js");
     const group = require("./distribution/all/groups")(crawlConfig);
     group.put(crawlConfig, crawlGroup, (e, v) => {
-      seed(() => getURLs());
+      seed(() => {
+        console.log("Finished crawling seed");
+        getURLs();
+      });
     });
   };
 }

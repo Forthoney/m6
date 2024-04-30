@@ -28,7 +28,6 @@ function doMapReduce(callback) {
     distribution.crawl.mr.exec(
       { keys, map, id: "crawler", storeLocally: true },
       (e, v) => {
-        console.log("COMPLETE=========================");
         callback();
       },
     );
