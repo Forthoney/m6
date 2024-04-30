@@ -1,9 +1,6 @@
-global.nodeConfig = { ip: "127.0.0.1", port: 7070 };
 const assert = require("node:assert");
 const distribution = require("../distribution");
 const groupMaker = require("../distribution/all/groups");
-
-const id = distribution.util.id;
 
 function map(filename, val) {
   const { JSDOM } = require("jsdom");
@@ -53,21 +50,7 @@ function reduce(url, links) {
   return url;
 }
 
-const crawlGroup = {};
-for (let i = 0; i < 500; i++) {
-  const node = { ip: "127.0.0.1", port: 7110 + i };
-  crawlGroup[id.getSID(node)] = node;
-}
-
-function startNodes() {
-  return Promise.all(
-    Object.values(crawlGroup).map((n) =>
-      distribution.local.status.spawnPromise(n),
-    ),
-  );
-}
-
-function doMapReduce() {
+function getURLs() {
   distribution.crawl.store
     .getSubgroupPromise(null, "map-crawler")
     .then((keys) => {
@@ -75,21 +58,10 @@ function doMapReduce() {
       distribution.crawl.mr.exec(
         { keys: subgroupKeys, map, reduce, id: "getURLs" },
         (e, v) => {
-          console.error(e);
-          assert(Object.values(e).length === 0);
           console.log("FINAL RESULT: ", v);
         },
       );
     });
 }
 
-let localServer = null;
-distribution.node.start((server) => {
-  localServer = server;
-  const crawlConfig = { gid: "crawl" };
-  startNodes().then(() => {
-    groupMaker(crawlConfig).put(crawlConfig, crawlGroup, (e, v) => {
-      doMapReduce();
-    });
-  });
-});
+module.exports = { getURLs };
