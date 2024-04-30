@@ -3,48 +3,33 @@ const assert = require("node:assert");
 const distribution = require("../distribution");
 
 function map(_key, urls) {
-  console.log(urls);
   const https = require("node:https");
   const { URL } = require("node:url");
   const assert = require("node:assert");
 
-  const fetchPromises = urls.map((url) => {
-    return new Promise((resolve, reject) => {
-      try {
-        new URL(url);
-      } catch (e) {
-        return reject(e);
-      }
+  assert(Object.keys(urls).length === 1);
+  const url = Object.keys(urls)[0];
+  return new Promise((resolve, reject) => {
+    try {
+      new URL(url);
+    } catch (e) {
+      return reject(e);
+    }
 
-      let data = "";
-      https
-        .get(url, (res) => {
-          const { statusCode } = res;
-          if (statusCode !== 200) {
-            res.resume();
-            return reject(
-              Error(`Request Failed with Error code ${statusCode}`),
-            );
-          }
-          res.on("data", (chunk) => (data += chunk));
-          res.on("end", () => {
-            resolve({ [url]: data });
-          });
-        })
-        .on("error", (e) => reject(e));
-    });
-  });
-  return Promise.allSettled(fetchPromises).then((results) => {
-    const body = {};
-    results.forEach((res) => {
-      if (res.status === "fulfilled") {
-        Object.assign(body, res.value);
-      } else {
-        console.log(urls);
-        console.log(res.reason);
-      }
-    });
-    return body;
+    let data = "";
+    https
+      .get(url, (res) => {
+        const { statusCode } = res;
+        if (statusCode !== 200) {
+          res.resume();
+          return reject(Error(`Request Failed with Error code ${statusCode}`));
+        }
+        res.on("data", (chunk) => (data += chunk));
+        res.on("end", () => {
+          resolve({ [url]: data });
+        });
+      })
+      .on("error", (e) => reject(e));
   });
 }
 
