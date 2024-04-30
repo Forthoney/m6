@@ -52,7 +52,7 @@ if (args.crawl) {
       { ip: "172.31.24.189", port: 7070 },
       { ip: "172.31.31.146", port: 7070 },
     ];
-    const crawlGroup = [];
+    const crawlGroup = {};
     for (const n of nodes) {
       crawlGroup[id.getSID(n)] = n;
     }
