@@ -1,9 +1,7 @@
-const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
 const distribution = require("../distribution");
-const groupMaker = require("../distribution/all/groups");
 
 function map(_key, vUrl) {
   return new Promise((resolve, reject) => {
@@ -26,7 +24,7 @@ function map(_key, vUrl) {
 function doMapReduce(callback) {
   distribution.crawl.store.getPromise(null).then((keys) => {
     distribution.crawl.mr.exec(
-      { keys, map, id: "crawler", storeLocally: true },
+      { keys, map, id: "seed", storeLocally: true },
       (e, v) => {
         callback();
       },
@@ -41,7 +39,6 @@ const urlsRaw = fs.readFileSync(
 const urls = urlsRaw.split("\n").map((url, idx) => {
   return { [idx]: url };
 });
-console.log(urls[0]);
 
 function seed(callback = () => {}) {
   let counter = 0;

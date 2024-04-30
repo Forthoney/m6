@@ -10,6 +10,7 @@ const store = require("./store");
 const comm = require("./comm");
 const groups = require("./groups");
 const util = require("../util/util");
+const { writeFileSync } = require("node:fs");
 const id = util.id;
 
 const mySid = id.getSID(global.nodeConfig);
@@ -84,18 +85,18 @@ function map(jobData, setting, callback = () => {}) {
           );
         }
       });
-      return Promise.all(storePromises);
+      return Promise.allSettled(storePromises);
     })
-    .then((_) => {
+    .then(() => callback(null, jobID))
+    .catch((e) => callback(e))
+    .finally(() => {
       const notifyRemote = {
         node: supervisor,
         service: `notify-${jobID}`,
         method: "call",
       };
       return comm.sendPromise([null], notifyRemote);
-    })
-    .then((_) => callback(null, jobID))
-    .catch((e) => callback(e));
+    });
 }
 
 function reduceOnMapResults(mapResults, reducer) {

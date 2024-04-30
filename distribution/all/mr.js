@@ -6,6 +6,7 @@
 const assert = require("node:assert");
 const local = require("../local/local");
 const util = require("../util/util");
+const { writeFileSync } = require("node:fs");
 const { toAsync, createRPC } = util.wire;
 const id = util.id;
 
@@ -65,10 +66,7 @@ function mr(config) {
             return Promise.all(promises);
           })
           .then((vals) => {
-            const mergeResults = vals
-              .flat()
-              .filter((v) => Object.keys(v).length > 0);
-            callback({}, mergeResults);
+            callback({}, Object.assign({}, ...vals.flat()));
           })
           .catch((e) => callback(e));
       }
@@ -94,6 +92,7 @@ function mr(config) {
           supervisor: global.nodeConfig,
           jobID: jobID,
         };
+        writeFileSync("log.txt", JSON.stringify(jobData));
         setupNotifyEndpoint(jobData, nodes.length, setting, callback);
 
         distService.comm.send([jobData, setting], {

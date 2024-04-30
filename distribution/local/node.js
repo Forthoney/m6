@@ -25,6 +25,9 @@ function isValidBody(body) {
 }
 
 function start(callback) {
+  // const interval = setInterval(() => {
+  //   console.log(global.nodeConfig.port + " alive");
+  // }, 5000);
   const nodeConfig = global.nodeConfig;
   const server = http.createServer((req, res) => {
     /* Your server will be listening for PUT requests. */
@@ -92,12 +95,12 @@ function start(callback) {
           return;
         }
 
-        console.log(
-          `[SERVER] (${nodeConfig.ip}:${nodeConfig.port})\n`,
-          `Request: ${service}:${method}\n`,
-          // Takes too long to print on long bodies
-          // `Args: ${JSON.stringify(jsBody)} ServiceCallback: ${serviceCallback}`,
-        );
+        // console.log(
+        //   `[SERVER] (${nodeConfig.ip}:${nodeConfig.port})\n`,
+        //   `Request: ${service}:${method}\n`,
+        //   // Takes too long to print on long bodies
+        //   // `Args: ${JSON.stringify(jsBody)} ServiceCallback: ${serviceCallback}`,
+        // );
 
         if (method in ser) {
           ser[method](...jsBody, serviceCallback);

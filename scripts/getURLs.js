@@ -1,6 +1,4 @@
-const assert = require("node:assert");
 const distribution = require("../distribution");
-const groupMaker = require("../distribution/all/groups");
 
 function map(filename, val) {
   const { JSDOM } = require("jsdom");
@@ -47,21 +45,19 @@ function map(filename, val) {
 }
 
 function reduce(url, links) {
-  return url;
+  return { [url]: null };
 }
 
-function getURLs() {
-  distribution.crawl.store
-    .getSubgroupPromise(null, "map-crawler")
-    .then((keys) => {
-      const subgroupKeys = keys.map((k) => `map-crawler/${k}`);
-      distribution.crawl.mr.exec(
-        { keys: subgroupKeys, map, reduce, id: "getURLs" },
-        (e, v) => {
-          console.log("FINAL RESULT: ", v);
-        },
-      );
-    });
+function getURLs(callback = () => {}) {
+  distribution.crawl.store.getSubgroupPromise(null, "map-seed").then((keys) => {
+    const subgroupKeys = keys.map((k) => `map-seed/${k}`);
+    distribution.crawl.mr.exec(
+      { keys: subgroupKeys, map, reduce, id: "getURLs" },
+      (e, v) => {
+        callback(v);
+      },
+    );
+  });
 }
 
 module.exports = { getURLs };
