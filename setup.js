@@ -38,7 +38,7 @@ function initNodeConfig(args) {
         ]);
       });
     };
-  } else if (args.local) {
+  } else if (typeof args.local === "number") {
     const prevOnStart = nodeConfig.onStart;
     nodeConfig.onStart = () => {
       return new Promise((resolve, reject) => {
@@ -58,6 +58,8 @@ function initNodeConfig(args) {
           .catch((e) => reject(e));
       });
     };
+  } else if (typeof args.spawner === "number") {
+    nodeConfig.onStart = () => new Promise((res, rej) => res(args.spawner));
   }
 
   return nodeConfig;
