@@ -49,10 +49,10 @@ function map(_key, vUrl) {
   });
 }
 
-function doMapReduce(callback) {
+function doMapReduce(filename, callback) {
   distribution.crawl.store.getPromise(null).then((keys) => {
     distribution.crawl.mr.exec(
-      { keys, map, id: "seed", storeLocally: true },
+      { keys, map, id: `seed-${filename}`, storeLocally: true },
       (e, v) => {
         callback();
       },
@@ -74,7 +74,7 @@ function seed(filename, callback = () => {}) {
         const [key, val] = Object.entries(url)[0];
         distribution.crawl.store.put(val, key, (e, v) => {
           if (++counter == urls.length) {
-            doMapReduce(callback);
+            doMapReduce(filename, callback);
           }
         });
       });
