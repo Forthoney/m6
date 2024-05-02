@@ -260,4 +260,5 @@ module.exports = {
   getPromise: promisify(get),
   getAllPromise: promisify(getAll),
   putPromise: promisify(put),
+  resolveFilePath
 };

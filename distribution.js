@@ -45,6 +45,46 @@ if (args.crawl) {
       });
     });
   };
+} else if (args.index) {
+  if (!args.aws && !args.local) {
+    throw Error("--aws or --local must be set to run crawl workflow");
+  }
+
+  if (typeof args.foldername !== "string") {
+    throw Error("--foldername must be specified");
+  }
+
+  const prevOnStart = global.nodeConfig.onStart;
+  global.nodeConfig.onStart = () => {
+    prevOnStart().then((nodes) => {
+      const crawlGroup = {};
+      for (const n of nodes) {
+        crawlGroup[id.getSID(n)] = n;
+      }
+
+      const crawlConfig = { gid: "crawl" };
+      const { index } = require("./scripts/index.js");
+      const group = require("./distribution/all/groups.js")(crawlConfig);
+      group.put(crawlConfig, crawlGroup, (e, v) => {
+        // Define service
+        const boogleService = {};
+        boogleService.index = index;
+
+        distribution.crawl.routes.put(boogleService, 'boogleService', (e, v) => {
+            const path = require("node:path");
+            const fs = require("node:fs");
+            // Pre-define paths for internal storage
+            const stopWordsPath = path.join(__dirname, "/data/stopwords.txt");
+            const remote = {service: 'boogleService', method: 'index'};
+            distribution.crawl.comm.send([args.foldername, stopWordsPath], remote, (e, v) => {
+              console.log(e)
+              console.log("COMPLETE INDEXING=========================");
+              local.distribution.crawl.status.stop();
+            });
+        });
+      });
+    });
+  };
 }
 
 module.exports = global.distribution;
