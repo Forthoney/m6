@@ -65,10 +65,7 @@ function mr(config) {
             return Promise.all(promises);
           })
           .then((vals) => {
-            const mergeResults = vals
-              .flat()
-              .filter((v) => Object.keys(v).length > 0);
-            callback({}, mergeResults);
+            callback({}, Object.assign({}, ...vals.flat()));
           })
           .catch((e) => callback(e));
       }

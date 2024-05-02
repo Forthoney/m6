@@ -1,16 +1,12 @@
 const assert = require("node:assert");
 
 const distribution = require("../distribution");
-const groupMaker = require("../distribution/all/groups");
-
-const id = distribution.util.id;
 
 function map(_key, urls) {
   const https = require("node:https");
   const { URL } = require("node:url");
-  const assert = require("node:assert");
 
-  const fetchPromises = urls.map((url) => {
+  const crawlPromises = Object.keys(urls).map((url) => {
     return new Promise((resolve, reject) => {
       try {
         new URL(url);
@@ -36,35 +32,18 @@ function map(_key, urls) {
         .on("error", (e) => reject(e));
     });
   });
-  return Promise.allSettled(fetchPromises).then((results) => {
-    const body = {};
-    results.forEach((res) => {
+  return Promise.allSettled(crawlPromises).then((results) => {
+    const success = {};
+    for (const res of results) {
       if (res.status === "fulfilled") {
-        Object.assign(body, res.value);
-      } else {
-        console.log(urls);
-        console.log(res.reason);
+        Object.assign(success, res.value);
       }
-    });
-    return body;
+    }
+    return success;
   });
 }
 
-const crawlGroup = {};
-for (let i = 0; i < 500; i++) {
-  const node = { ip: "127.0.0.1", port: 7110 + i };
-  crawlGroup[id.getSID(node)] = node;
-}
-
-function startNodes() {
-  return Promise.all(
-    Object.values(crawlGroup).map((n) =>
-      distribution.local.status.spawnPromise(n),
-    ),
-  );
-}
-
-function doMapReduce() {
+function crawl(callback = () => {}) {
   distribution.crawl.store
     .getSubgroupPromise(null, "reduce-getURLs")
     .then((keys) => {
@@ -73,25 +52,17 @@ function doMapReduce() {
         {
           keys: subgroupKeys,
           map,
-          id: "crawl2",
+          id: "crawl",
           storeLocally: true,
         },
         (e, v) => {
           console.error(e);
           assert(Object.values(e).length === 0);
           console.log("COMPLETE=========================");
+          callback(v);
         },
       );
     });
 }
 
-let localServer = null;
-distribution.node.start((server) => {
-  localServer = server;
-  const crawlConfig = { gid: "crawl" };
-  startNodes().then(() => {
-    groupMaker(crawlConfig).put(crawlConfig, crawlGroup, (e, v) => {
-      doMapReduce();
-    });
-  });
-});
+module.exports = { crawl };

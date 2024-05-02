@@ -268,19 +268,25 @@ function deserialize(string) {
   // flag if any keyword replacement occurred
   let removeUnderscore = false;
 
-  const parsed = JSON.parse(string, (key, item) => {
-    removeUnderscore =
-      removeUnderscore || key.match(/(^_+type$)|(^_+value$)|(^_+objectId$)/g);
-    return item instanceof Object && "type" in item ? parseWrapper(item) : item;
-  });
-  const objectIdMap = new Map();
-  if (parsed instanceof Object) {
-    createObjectIdMap(parsed, objectIdMap);
-    replaceReferences(parsed, objectIdMap);
+  try {
+    const parsed = JSON.parse(string, (key, item) => {
+      removeUnderscore =
+        removeUnderscore || key.match(/(^_+type$)|(^_+value$)|(^_+objectId$)/g);
+      return item instanceof Object && "type" in item
+        ? parseWrapper(item)
+        : item;
+    });
+    const objectIdMap = new Map();
+    if (parsed instanceof Object) {
+      createObjectIdMap(parsed, objectIdMap);
+      replaceReferences(parsed, objectIdMap);
+    }
+    // if removeUnderscore flag was not set, recursive traversal to replace keys
+    // is skipped
+    return removeUnderscore ? removeLeadingUnderscore(parsed) : parsed;
+  } catch (e) {
+    console.error(string, e);
   }
-  // if removeUnderscore flag was not set, recursive traversal to replace keys
-  // is skipped
-  return removeUnderscore ? removeLeadingUnderscore(parsed) : parsed;
 }
 
 module.exports = {
