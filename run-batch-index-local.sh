@@ -1,3 +1,4 @@
 #!/bin/sh
+ip=$(hostname -i)
 
-./distribution.js --local 8 --index --prefixname map-seed-output
+./distribution.js --local 2 --ip "$ip" --port 7070 --index --prefixname map-seed-output
