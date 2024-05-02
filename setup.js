@@ -46,7 +46,7 @@ function initNodeConfig(args) {
         const nodes = [];
         const startingPortNum = nodeConfig.port;
         for (let i = 1; i <= args.local; i++) {
-          nodes.push({ ip: "127.0.0.1", port: startingPortNum + i * 10 });
+          nodes.push({ ip: nodeConfig.ip, port: startingPortNum + i * 10 });
         }
         Promise.all(
           nodes.map((n) => global.distribution.local.status.spawnPromise(n)),
