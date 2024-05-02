@@ -22,12 +22,12 @@ function index(prefixname, stopWordsPath) {
         if (!fs.existsSync(filePath)) {
             try {
                 fs.writeFileSync(filePath, content);
-                console.log(`File ${filePath} created successfully.`);
+                // console.log(`File ${filePath} created successfully.`);
             } catch (err) {
                 console.error(`Error creating file ${filePath}:`, err);
             }
         } else {
-            console.log(`File ${filePath} already exists.`);
+            // console.log(`File ${filePath} already exists.`);
         }
     }
     
@@ -148,7 +148,6 @@ function index(prefixname, stopWordsPath) {
                                     // console.log(`Finished Indexing ${keys.length} websites in ${foldername}. Took ${duration}ms`)
                                     if (numIndex == numIndexTotal) {
                                         
-                                        console.log("START COMBINING all index")
                                         // Combining all the batched index into one index per node
                                         let combineCounter = 1;
                                         localIndexPaths.forEach((localIndexPath) => {
