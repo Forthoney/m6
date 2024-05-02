@@ -21,6 +21,11 @@ if (args.crawl) {
   if (!args.aws && !args.local) {
     throw Error("--aws or --local must be set to run crawl workflow");
   }
+
+  if (typeof args.filename !== "string") {
+    throw Error("--filename must be specified");
+  }
+
   const prevOnStart = global.nodeConfig.onStart;
   global.nodeConfig.onStart = () => {
     prevOnStart().then((nodes) => {
@@ -34,15 +39,8 @@ if (args.crawl) {
       const { getURLs } = require("./scripts/getURLs.js");
       const group = require("./distribution/all/groups.js")(crawlConfig);
       group.put(crawlConfig, crawlGroup, (e, v) => {
-        seed(() => {
-          console.log("Finished crawling seed");
-          getURLs((v) => {
-            const urls = Object.keys(v);
-            console.log(`Found ${urls.length} outgoing links.`);
-            fs.writeFile("outgoing-urls.txt", urls.join("\n"), () => {
-              global.distribution.crawl.status.stop();
-            });
-          });
+        seed(args.filename, () => {
+          global.distribution.crawl.status.stop();
         });
       });
     });

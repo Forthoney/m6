@@ -60,24 +60,26 @@ function doMapReduce(callback) {
   });
 }
 
-const urlsRaw = fs.readFileSync(
-  path.join(__dirname, "..", "data", "bigurls.txt"),
-  "utf8",
-);
-const urls = urlsRaw.split("\n").map((url, idx) => {
-  return { [idx]: url };
-});
+function seed(filename, callback = () => {}) {
+  fs.readFile(
+    path.join(__dirname, "..", "data", filename),
+    "utf8",
+    (urlsRaw) => {
+      const urls = urlsRaw.split("\n").map((url, idx) => {
+        return { [idx]: url };
+      });
 
-function seed(callback = () => {}) {
-  let counter = 0;
-  urls.forEach((url) => {
-    const [key, val] = Object.entries(url)[0];
-    distribution.crawl.store.put(val, key, (e, v) => {
-      if (++counter == urls.length) {
-        doMapReduce(callback);
-      }
-    });
-  });
+      let counter = 0;
+      urls.forEach((url) => {
+        const [key, val] = Object.entries(url)[0];
+        distribution.crawl.store.put(val, key, (e, v) => {
+          if (++counter == urls.length) {
+            doMapReduce(callback);
+          }
+        });
+      });
+    },
+  );
 }
 
 module.exports = { seed };

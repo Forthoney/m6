@@ -12,7 +12,7 @@ global.moreStatus = {
   counts: 0,
 };
 
-function get(configuration, callback) {
+function get(configuration, callback = () => {}) {
   if (configuration in global.nodeConfig) {
     callback(null, global.nodeConfig[configuration]);
   } else if (configuration in moreStatus) {
@@ -26,14 +26,14 @@ function get(configuration, callback) {
   }
 }
 
-function stop(callback) {
+function stop(callback = () => {}) {
   setTimeout(() => {
     callback(null, global.nodeConfig);
     process.exit(0);
   }, 1000);
 }
 
-function spawn(config, callback) {
+function spawn(config, callback = () => {}) {
   const callbackRPC = createRPC(toAsync(callback));
   let originalOnStart = "";
   if ("onStart" in config) {
