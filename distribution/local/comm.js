@@ -24,10 +24,10 @@ function send(message, remote, callback = () => {}) {
     remote.node.ip === global.nodeConfig.ip &&
     remote.node.port === global.nodeConfig.port
   ) {
-    return global.distribution.local[remote.service][remote.method](
-      ...message,
-      callback,
-    );
+    const local = global.distribution.local;
+    if (remote.service in local && remote.method in local[remote.service]) {
+      return local[remote.service][remote.method](...message, callback);
+    }
   }
 
   const options = {
