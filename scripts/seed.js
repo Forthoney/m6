@@ -88,7 +88,7 @@ function seedRec(filenames, callback = () => {}) {
 }
 
 function seed(namepattern, callback = () => {}) {
-  fs.readdir(__dirname, "..", "data", (_e, filenames) => {
+  fs.readdir(path.join(__dirname, "..", "data"), (_e, filenames) => {
     const filtered = filenames.filter((n) => n.includes(namepattern));
     seed(filtered, callback);
   });
