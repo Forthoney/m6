@@ -60,7 +60,12 @@ function doMapReduce(filename, callback) {
   });
 }
 
-function seed(filename, callback = () => {}) {
+function seedRec(filenames, callback = () => {}) {
+  if (filenames.length === 0) {
+    return callback();
+  }
+
+  const [filename, ...tail] = filenames;
   fs.readFile(
     path.join(__dirname, "..", "data", filename),
     "utf8",
@@ -74,12 +79,19 @@ function seed(filename, callback = () => {}) {
         const [key, val] = Object.entries(url)[0];
         distribution.crawl.store.put(val, key, (e, v) => {
           if (++counter == urls.length) {
-            doMapReduce(filename, callback);
+            doMapReduce(filename, seedRec(tail, callback));
           }
         });
       });
     },
   );
+}
+
+function seed(namepattern, callback = () => {}) {
+  fs.readdir(__dirname, "..", "data", (_e, filenames) => {
+    const filtered = filenames.filter((n) => n.includes(namepattern));
+    seed(filtered, callback);
+  });
 }
 
 module.exports = { seed };
