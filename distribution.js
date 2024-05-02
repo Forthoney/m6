@@ -17,51 +17,36 @@ Usage:
 ./distribution.js --ip '127.0.0.1' --port 1234
 */
 
-if (args.aws || args.local) {
+if (args.crawl) {
+  if (!args.aws && !args.local) {
+    throw Error("--aws or --local must be set to run crawl workflow");
+  }
   const prevOnStart = global.nodeConfig.onStart;
+  global.nodeConfig.onStart = () => {
+    prevOnStart().then((nodes) => {
+      const crawlGroup = {};
+      for (const n of nodes) {
+        crawlGroup[id.getSID(n)] = n;
+      }
 
-  if (args.seed) {
-    global.nodeConfig.onStart = () => {
-      prevOnStart().then((nodes) => {
-        const crawlGroup = {};
-        for (const n of nodes) {
-          crawlGroup[id.getSID(n)] = n;
-        }
-
-        const crawlConfig = { gid: "crawl" };
-        const { seed } = require("./scripts/seed.js");
-        const { getURLs } = require("./scripts/getURLs.js");
-        const group = require("./distribution/all/groups.js")(crawlConfig);
-        group.put(crawlConfig, crawlGroup, (e, v) => {
-          seed(() => {
-            console.log("Finished crawling seed");
-            getURLs((v) => {
-              const urls = Object.keys(v);
-              console.log(`Found ${urls.length} outgoing links.`);
-              fs.writeFile("outgoing-urls.txt", urls.join("\n"), () => {
-                global.distribution.crawl.status.stop();
-              });
+      const crawlConfig = { gid: "crawl" };
+      const { seed } = require("./scripts/seed.js");
+      const { getURLs } = require("./scripts/getURLs.js");
+      const group = require("./distribution/all/groups.js")(crawlConfig);
+      group.put(crawlConfig, crawlGroup, (e, v) => {
+        seed(() => {
+          console.log("Finished crawling seed");
+          getURLs((v) => {
+            const urls = Object.keys(v);
+            console.log(`Found ${urls.length} outgoing links.`);
+            fs.writeFile("outgoing-urls.txt", urls.join("\n"), () => {
+              global.distribution.crawl.status.stop();
             });
           });
         });
       });
-    };
-  } else if (args.crawl) {
-    global.nodeConfig.onStart = () => {
-      prevOnStart().then((nodes) => {
-        const crawlGroup = {};
-        for (const n of nodes) {
-          crawlGroup[id.getSID(n)] = n;
-        }
-        const crawlConfig = { gid: "crawl" };
-        const { crawl } = require("./scripts/crawl.js");
-        const group = require("./distribution/all/groups.js")(crawlConfig);
-        group.put(crawlConfig, crawlGroup, (e, v) => {
-          crawl(() => global.distribution.crawl.status.stop());
-        });
-      });
-    };
-  }
+    });
+  };
 }
 
 module.exports = global.distribution;

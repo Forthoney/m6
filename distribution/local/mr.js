@@ -58,7 +58,10 @@ function map(jobData, setting, callback = () => {}) {
       return Promise.allSettled(computeAndSave);
     })
     .then(() => callback(null, jobID))
-    .catch((e) => callback(e))
+    .catch((e) => {
+      console.log(e);
+      callback(e);
+    })
     .finally(() => {
       const notifyRemote = {
         node: supervisor,
