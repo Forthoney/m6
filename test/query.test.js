@@ -159,6 +159,23 @@ test('Query for all sites with 0', (done) => {
   });
 });
 
+test('Query for all sites with 0 or 1', (done) => {
+  distribution.mygroup.store.query(["0", "1"], [], [], 10, (e, v) => {
+    try {
+      expect(e).toBeFalsy();
+      expect(v).toEqual([
+        "https://www.github.com",
+        "https://stackoverflow.com/questions/59147944/how-to-provide-accessibility-permissions-to-swift-apps-in-development",
+        "https://www.w3schools.com/html/default.asp",
+        "https://www.google.com"
+      ]);
+      done();
+    } catch (error) {
+      done(error);
+    }
+  });
+});
+
 test('Query for some sites with 0', (done) => {
   distribution.mygroup.store.query(["0"], [], [], 1, (e, v) => {
     try {
