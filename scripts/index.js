@@ -31,28 +31,28 @@ function index(prefixname, stopWordsPath) {
         }
     }
     
-    function updateLocalIndex(localIndexPath, newIndex) {
+    function updateIndex(indexPath, newIndex) {
         try {
-            const data = fs.readFileSync(localIndexPath, 'utf8');
-            const globalIndex = JSON.parse(data);
+            const data = fs.readFileSync(indexPath, 'utf8');
+            const index = JSON.parse(data);
     
             // Merge the existing data with the new data
             Object.keys(newIndex).forEach(token => {
-                if (token in globalIndex && !isNaN(globalIndex[token])) {
+                if (token in index && !isNaN(index[token])) {
                     try {
                         // If key exists in both indexes, merge counts
-                        globalIndex[token].push(newIndex[token]);
+                        index[token].push(newIndex[token]);
                     } catch (err) {
-                        console.error('Error updating index:', err, token in globalIndex, globalIndex[token]);
+                        console.error('Error updating index:', err);
                     }
                 } else {
                     // If key exists only in index1, add it to merged index
-                    globalIndex[token] = [newIndex[token]];
+                    index[token] = [newIndex[token]];
                 }
             });
     
             // Write the updated index back to the file
-            fs.writeFileSync(localIndexPath, JSON.stringify(globalIndex, null, 2));
+            fs.writeFileSync(indexPath, JSON.stringify(index, null, 2));
         } catch (err) {
             console.error('Error reading JSON file:', err);
         }
@@ -93,7 +93,7 @@ function index(prefixname, stopWordsPath) {
 
         numIndexTotal = foldernames.length;
         numIndex = 1;
-
+        let localIndexPaths = [];
         foldernames.forEach(foldername => {
                     if (!fs.existsSync(path.join(folderPath, `${foldername}`))) {
                         console.log(`${folderPath/foldername} doesn't exist, skip`)
@@ -109,6 +109,7 @@ function index(prefixname, stopWordsPath) {
             
                     // Create file to store index if it doesn't exist
                     const localIndexPath = path.join(folderPath, `index-${foldername}/index.json`)
+                    localIndexPaths.push(localIndexPath);
                     createFileIfNotExists(localIndexPath, '{}');
             
                     // Load stopwords into a map
@@ -139,16 +140,35 @@ function index(prefixname, stopWordsPath) {
                                 });
             
                                 // Store to the global index
-                                updateLocalIndex(localIndexPath, fileIndex);
+                                updateIndex(localIndexPath, fileIndex);
             
                                 if (counter == keys.length) {
                                     let batchEndTime = Date.now();
                                     let duration = batchEndTime - batchStartTime;
                                     // console.log(`Finished Indexing ${keys.length} websites in ${foldername}. Took ${duration}ms`)
                                     if (numIndex == numIndexTotal) {
-                                        let endTime = Date.now();
-                                        let duration = endTime - startTime;
-                                        console.log(`Finished Indexing ${numIndexTotal} batches. Took ${duration}ms`)
+                                        
+                                        console.log("START COMBINING all index")
+                                        // Combining all the batched index into one index per node
+                                        let combineCounter = 1;
+                                        localIndexPaths.forEach((localIndexPath) => {
+                                            // Create file to store index if it doesn't exist
+                                            const globalIndexPath = path.join(folderPath, `index.json`)
+                                            createFileIfNotExists(globalIndexPath, '{}');
+
+                                            const data = fs.readFileSync(localIndexPath, 'utf8');
+                                            const localIndex = JSON.parse(data);
+
+                                            updateIndex(globalIndexPath, localIndex)
+
+                                            if (combineCounter == localIndexPaths.length) {
+                                                let endTime = Date.now();
+                                                let duration = endTime - startTime;
+                                                console.log(`Finished Indexing ${numIndexTotal} batches. Took ${duration}ms`)
+                                            }
+                                            combineCounter += 1;
+                                        });
+
                                     }
                                     numIndex += 1;
                                 }
