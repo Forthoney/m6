@@ -40,6 +40,7 @@ function map(_key, vUrl) {
       });
     }
 
+    setTimeout(() => reject(`SOCKET TIMOUT on ${vUrl}`), 10000);
     makeReq(vUrl);
   });
 }
