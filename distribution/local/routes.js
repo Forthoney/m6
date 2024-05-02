@@ -16,7 +16,6 @@ function get(service, callback = () => {}) {
   } else if (global.rpcLocal.has(service)) {
     return callback(null, { call: global.rpcLocal.get(service) });
   } else {
-    console.log(global.rpcLocal);
     return callback(Error(`Route ${service} not found in services`), null);
   }
 }
