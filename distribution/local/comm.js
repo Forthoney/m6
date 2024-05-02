@@ -13,6 +13,28 @@ const serialization = require("../util/serialization");
  * @property {NodeInfo} node
  */
 
+function sendInner(options, serialized, message, remote, callback) {
+  const req = http.request(options, (res) => {
+    let body = "";
+    res.on("data", (chunk) => {
+      body += chunk;
+    });
+    res.on("end", () => {
+      const [err, content] = serialization.deserialize(body);
+      return callback(err, content);
+    });
+  });
+
+  req.on("error", (e) => {
+    const err = `${e.message}: sending ${message} to ${remote.node.ip}:${remote.node.port}`;
+    console.log(err);
+    return callback(Error(err));
+  });
+
+  req.write(serialized);
+  req.end();
+}
+
 /**
  * @param {Array} message
  * @param {LocalRemote} remote
@@ -39,27 +61,20 @@ function send(message, remote, callback = () => {}) {
       "content-type": "application/json",
     },
   };
-  const req = http.request(options, (res) => {
-    let body = "";
-    res.on("data", (chunk) => {
-      body += chunk;
-    });
-    res.on("end", () => {
-      const [err, content] = serialization.deserialize(body);
-      callback(err, content);
-    });
-  });
-
   const serialized = serialization.serialize(message);
 
-  req.on("error", (e) => {
-    const err = `${e.message}: sending ${message} to ${remote.node.ip}:${remote.node.port}`;
-    console.log(err);
-    callback(Error(err));
-  });
-
-  req.write(serialized);
-  req.end();
+  let retryCount = 0;
+  const sendInnerRec = (e, content) => {
+    if (e) {
+      if (retryCount++ < 5) {
+        return sendInner(options, serialized, message, remote, sendInnerRec);
+      } else {
+        return callback(e);
+      }
+    }
+    return callback(null, content);
+  };
+  sendInner(options, serialized, message, remote, sendInnerRec);
 }
 
 module.exports = { send, sendPromise: promisify(send) };
