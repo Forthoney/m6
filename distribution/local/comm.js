@@ -20,6 +20,16 @@ const serialization = require("../util/serialization");
  * @return {void}
  */
 function send(message, remote, callback = () => {}) {
+  if (
+    remote.node.ip === global.nodeConfig.ip &&
+    remote.node.port === global.nodeConfig.port
+  ) {
+    return global.distribution.local[remote.service][remote.method](
+      ...message,
+      callback,
+    );
+  }
+
   const options = {
     hostname: remote.node.ip,
     port: remote.node.port,
@@ -45,7 +55,6 @@ function send(message, remote, callback = () => {}) {
   req.on("error", (e) => {
     const err = `${e.message}: sending ${message} to ${remote.node.ip}:${remote.node.port}`;
     console.log(err);
-    console.log(serialized.length);
     callback(Error(err));
   });
 
