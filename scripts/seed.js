@@ -64,7 +64,7 @@ function seed(filename, callback = () => {}) {
   fs.readFile(
     path.join(__dirname, "..", "data", filename),
     "utf8",
-    (urlsRaw) => {
+    (_e, urlsRaw) => {
       const urls = urlsRaw.split("\n").map((url, idx) => {
         return { [idx]: url };
       });
