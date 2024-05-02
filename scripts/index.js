@@ -14,7 +14,7 @@ const { exec } = require('child_process');
 
 
 
-function index(foldername, stopWordsPath) {
+function index(prefixname, stopWordsPath) {
     const path = require("node:path");
     const fs = require("node:fs");
     // Util functions
@@ -38,9 +38,13 @@ function index(foldername, stopWordsPath) {
     
             // Merge the existing data with the new data
             Object.keys(newIndex).forEach(token => {
-                if (token in globalIndex) {
-                    // If key exists in both indexes, merge counts
-                    globalIndex[token].push(newIndex[token]);
+                if (token in globalIndex && !isNaN(globalIndex[token])) {
+                    try {
+                        // If key exists in both indexes, merge counts
+                        globalIndex[token].push(newIndex[token]);
+                    } catch (err) {
+                        console.error('Error updating index:', err, token in globalIndex, globalIndex[token]);
+                    }
                 } else {
                     // If key exists only in index1, add it to merged index
                     globalIndex[token] = [newIndex[token]];
@@ -79,61 +83,82 @@ function index(foldername, stopWordsPath) {
     }
 
     distribution.local.store.resolveFilePath(`crawl`, null, (_, folderPath) => {
-        if (!fs.existsSync(path.join(folderPath, `${foldername}`))) {
-            console.log(`${folderPath/foldername} doesn't exist, skip`)
-            return
-        }
-        // Create batch index folder
-        const indexDirPath = path.join(folderPath, `index-${foldername}`)
-        if (!fs.existsSync(indexDirPath)) {
-            fs.mkdirSync(indexDirPath, { recursive: true });
-        }
-
-        // Create file to store index if it doesn't exist
-        const localIndexPath = path.join(folderPath, `index-${foldername}/index.json`)
-        createFileIfNotExists(localIndexPath, '{}');
-
-        // Load stopwords into a map
-        const stopWords = new Set(fs.readFileSync(stopWordsPath, 'utf8').split('\n').map(word => word.trim()));
-        
-        const dirKey = {key: {folder: foldername, key: null}, gid: "crawl"};
-        distribution.local.store.getPromise(dirKey).then((keys) => {
-            if (keys.length === 0) {
-                console.log("No crawled results found.");
-                return;
-            }
-            let counter = 1;
-            let startTime = Date.now();
-            keys.forEach((key) => {
-                const fileKey = {key: {folder: foldername, key: key}, gid: "crawl"};
-                distribution.local.store.getPromise(fileKey).then((crawlRes) => {
-                    const url = Object.keys(crawlRes)[0];
-                    const rawData = crawlRes[url];
-                    const parsedTokens = parse(rawData, stopWords);
-                    // index for one html doc
-                    var fileIndex = {};
-                    parsedTokens.forEach(token => {
-                        if (!(token in fileIndex)) {
-                            fileIndex[token] = { count: 1, url: url };
-                        } else {
-                            fileIndex[token].count++;
-                        }
-                    });
-
-                    // Store to the global index
-                    updateLocalIndex(localIndexPath, fileIndex);
-
-                    if (counter == keys.length) {
-                        let endTime = Date.now();
-                        let duration = endTime - startTime;
-                        console.log(`Finished Indexing ${keys.length} websites. Took ${duration}ms`)
-                    }
-                    counter += 1;
-                });
-            });
-
-            console.log(`Starting Indexing ${keys.length} websites.`)
+        const items = fs.readdirSync(folderPath);
+        const foldernames = items.filter(item => {
+            const itemPath = path.join(folderPath, item);
+            
+            // Check if the item is a directory and if it starts with the prefix
+            return fs.statSync(itemPath).isDirectory() && item.startsWith(prefixname);
         });
+
+        numIndexTotal = foldernames.length;
+        numIndex = 1;
+
+        foldernames.forEach(foldername => {
+                    if (!fs.existsSync(path.join(folderPath, `${foldername}`))) {
+                        console.log(`${folderPath/foldername} doesn't exist, skip`)
+                        return
+                    }
+
+                    let startTime = Date.now()
+                    // Create batch index folder
+                    const indexDirPath = path.join(folderPath, `index-${foldername}`)
+                    if (!fs.existsSync(indexDirPath)) {
+                        fs.mkdirSync(indexDirPath, { recursive: true });
+                    }
+            
+                    // Create file to store index if it doesn't exist
+                    const localIndexPath = path.join(folderPath, `index-${foldername}/index.json`)
+                    createFileIfNotExists(localIndexPath, '{}');
+            
+                    // Load stopwords into a map
+                    const stopWords = new Set(fs.readFileSync(stopWordsPath, 'utf8').split('\n').map(word => word.trim()));
+                    
+                    const dirKey = {key: {folder: foldername, key: null}, gid: "crawl"};
+                    distribution.local.store.getPromise(dirKey).then((keys) => {
+                        if (keys.length === 0) {
+                            console.log("No crawled results found.");
+                            return;
+                        }
+                        let counter = 1;
+                        let batchStartTime = Date.now();
+                        keys.forEach((key) => {
+                            const fileKey = {key: {folder: foldername, key: key}, gid: "crawl"};
+                            distribution.local.store.getPromise(fileKey).then((crawlRes) => {
+                                const url = Object.keys(crawlRes)[0];
+                                const rawData = crawlRes[url];
+                                const parsedTokens = parse(rawData, stopWords);
+                                // index for one html doc
+                                var fileIndex = {};
+                                parsedTokens.forEach(token => {
+                                    if (!(token in fileIndex)) {
+                                        fileIndex[token] = { count: 1, url: url };
+                                    } else {
+                                        fileIndex[token].count++;
+                                    }
+                                });
+            
+                                // Store to the global index
+                                updateLocalIndex(localIndexPath, fileIndex);
+            
+                                if (counter == keys.length) {
+                                    let batchEndTime = Date.now();
+                                    let duration = batchEndTime - batchStartTime;
+                                    // console.log(`Finished Indexing ${keys.length} websites in ${foldername}. Took ${duration}ms`)
+                                    if (numIndex == numIndexTotal) {
+                                        let endTime = Date.now();
+                                        let duration = endTime - startTime;
+                                        console.log(`Finished Indexing ${numIndexTotal} batches. Took ${duration}ms`)
+                                    }
+                                    numIndex += 1;
+                                }
+                                counter += 1;
+                            });
+                        });
+            
+                        // console.log(`Starting Indexing ${keys.length} websites.`)
+                    });
+        })
     })
     
 }
