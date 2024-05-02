@@ -122,71 +122,69 @@ function store(config) {
     });
   }
 
-  /**
- * Performs a distributed query across all nodes in the group, aggregates results,
+/**
+ * Performs a distributed query across all nodes in the group for multiple search terms, aggregates results,
  * combines counts for identical URLs, and sorts them by count.
- * @param {string} searchTerm - The term to query.
+ * @param {string[]} searchTerms - The terms to query.
  * @param {string[]} includeURLs - URLs to include in the results.
  * @param {string[]} excludeURLs - URLs to exclude from the results.
  * @param {number} maxResults - Maximum number of result URLs to return.
  * @param {Callback} callback - Callback to handle the response or error.
  * @return {void}
  */
-  function query(searchTerm, includeURLs, excludeURLs, maxResults, callback) {
+  function query(searchTerms, includeURLs, excludeURLs, maxResults, callback) {
     local.groups.get(context.gid, async (err, group) => {
       if (err) return callback(err);
 
-      // Collect promises to execute queries on each node
-      const queryPromises = Object.values(group).map(node => {
-        return new Promise((resolve, reject) => {
-          const remote = {
-            service: "store",
-            method: "query",
-            node: node
-          };
-          local.comm.send([searchTerm, includeURLs, excludeURLs], remote, (e, result) => {
-            if (e) {
-              reject(e);
-            } else {
-              resolve(result);
-            }
+      // Collect promises for each search term across all nodes
+      const queryPromises = searchTerms.flatMap(term => {
+        return Object.values(group).map(node => {
+          return new Promise((resolve, reject) => {
+            const remote = {
+              service: "store",
+              method: "query",
+              node: node
+            };
+            local.comm.send([term, includeURLs, excludeURLs], remote, (e, result) => {
+              if (e) {
+                reject(e);
+              } else {
+                resolve(result);
+              }
+            });
           });
         });
       });
 
-      // Wait for all queries to complete.
+      // Wait for all queries to complete
       try {
         const results = await Promise.all(queryPromises);
         const urlCounts = {};
 
-      // Aggregate counts
-      results.forEach(nodeResults => {
-        nodeResults.forEach(item => {
-          if (item && item.url) {
-            if (!urlCounts[item.url]) {
-              urlCounts[item.url] = 0;
+        // Aggregate counts from all search terms
+        results.forEach(nodeResults => {
+          nodeResults.forEach(item => {
+            if (item && item.url) {
+              urlCounts[item.url] = (urlCounts[item.url] || 0) + item.count;
             }
-            urlCounts[item.url] += item.count;
-          }
+          });
         });
-      });
 
-      // Convert the aggregated results into an array, sort by count, and then map to just URLs
-      const sortedUrls = Object.keys(urlCounts)
-        .map(url => ({ url, count: urlCounts[url] }))
-        .sort((a, b) => b.count - a.count)
-        .map(item => item.url); // Extract only the URL, discard the count
+        // Convert the aggregated results into an array, sort by count
+        const sortedUrls = Object.keys(urlCounts)
+          .map(url => ({ url, count: urlCounts[url] }))
+          .sort((a, b) => b.count - a.count)
+          .map(item => item.url); // Extract only the URL, discard the count
 
-      if (sortedUrls.length === 0) {
-        callback(null, []); // No results found
-      } else {
-        callback(null, sortedUrls.slice(0, maxResults)); // Return top results based on maxResults
+        if (sortedUrls.length === 0) {
+          callback(null, []); // No results found
+        } else {
+          callback(null, sortedUrls.slice(0, maxResults)); // Return top results based on maxResults
+        }
+      } catch (error) {
+        callback(error);
       }
-    } catch (error) {
-      console.log("Returning error!")
-      callback(error);
-    }
-  });
+    });
   }
 
   // TODO: Delete moved key-value pairs.

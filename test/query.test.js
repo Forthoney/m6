@@ -143,16 +143,14 @@ afterAll((done) => {
   });
 });
 
-
-
 test('Query for all sites with 0', (done) => {
-  distribution.mygroup.store.query("0", [], [], 10, (e, v) => {
+  distribution.mygroup.store.query(["0"], [], [], 10, (e, v) => {
     try {
       expect(e).toBeFalsy();
       expect(v).toEqual([
-      "https://www.github.com",
-      "https://stackoverflow.com/questions/59147944/how-to-provide-accessibility-permissions-to-swift-apps-in-development",
-      "https://www.w3schools.com/html/default.asp",
+        "https://www.github.com",
+        "https://stackoverflow.com/questions/59147944/how-to-provide-accessibility-permissions-to-swift-apps-in-development",
+        "https://www.w3schools.com/html/default.asp",
       ]);
       done();
     } catch (error) {
@@ -162,11 +160,11 @@ test('Query for all sites with 0', (done) => {
 });
 
 test('Query for some sites with 0', (done) => {
-  distribution.mygroup.store.query("0", [], [], 1, (e, v) => {
+  distribution.mygroup.store.query(["0"], [], [], 1, (e, v) => {
     try {
       expect(e).toBeFalsy();
       expect(v).toEqual([
-      "https://www.github.com",
+        "https://www.github.com",
       ]);
       done();
     } catch (error) {
@@ -176,11 +174,11 @@ test('Query for some sites with 0', (done) => {
 });
 
 test('Test include list', (done) => {
-  distribution.mygroup.store.query("0", ["https://www.github.com"], [], 5, (e, v) => {
+  distribution.mygroup.store.query(["0"], ["https://www.github.com"], [], 5, (e, v) => {
     try {
       expect(e).toBeFalsy();
       expect(v).toEqual([
-      "https://www.github.com",
+        "https://www.github.com",
       ]);
       done();
     } catch (error) {
@@ -190,12 +188,12 @@ test('Test include list', (done) => {
 });
 
 test('Test exclude list', (done) => {
-  distribution.mygroup.store.query("0", [], ["https://www.github.com"], 10, (e, v) => {
+  distribution.mygroup.store.query(["0"], [], ["https://www.github.com"], 10, (e, v) => {
     try {
       expect(e).toBeFalsy();
       expect(v).toEqual([
-      "https://stackoverflow.com/questions/59147944/how-to-provide-accessibility-permissions-to-swift-apps-in-development",
-      "https://www.w3schools.com/html/default.asp",
+        "https://stackoverflow.com/questions/59147944/how-to-provide-accessibility-permissions-to-swift-apps-in-development",
+        "https://www.w3schools.com/html/default.asp",
       ]);
       done();
     } catch (error) {
@@ -205,7 +203,7 @@ test('Test exclude list', (done) => {
 });
 
 test('Query for all sites with not included term', (done) => {
-  distribution.mygroup.store.query("wahahahahahahahah", [], [], 10, (e, v) => {
+  distribution.mygroup.store.query(["wahahahahahahahah"], [], [], 10, (e, v) => {
     try {
       expect(e).toBeFalsy();
       expect(v).toEqual([]);
@@ -229,7 +227,7 @@ test('Repeated Query Total Performance Test', (done) => {
       return;
     }
 
-    distribution.mygroup.store.query("0", [], [], 10, (e, v) => {
+    distribution.mygroup.store.query(["0"], [], [], 10, (e, v) => {
       // Immediately start the next query without waiting
       runQuery(index + 1);
     });
