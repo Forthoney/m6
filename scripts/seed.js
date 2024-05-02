@@ -4,6 +4,7 @@ const path = require("node:path");
 const distribution = require("../distribution");
 
 function map(_key, vUrl) {
+  console.log(`REQUESTING ${vUrl}`);
   return new Promise((resolve, reject) => {
     const https = require("node:https");
     let data = "";
@@ -24,7 +25,10 @@ function map(_key, vUrl) {
             }
           } else if (statusCode === 200) {
             res.on("data", (chunk) => (data += chunk));
-            res.on("end", () => resolve({ [url]: data }));
+            res.on("end", () => {
+              console.log(`DONE WITH ${url}`);
+              resolve({ [url]: data });
+            });
           } else {
             res.resume();
             return reject(
