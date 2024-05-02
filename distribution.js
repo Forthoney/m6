@@ -50,8 +50,8 @@ if (args.crawl) {
     throw Error("--aws or --local must be set to run crawl workflow");
   }
 
-  if (typeof args.foldername !== "string") {
-    throw Error("--foldername must be specified");
+  if (typeof args.prefixname !== "string") {
+    throw Error("--prefixname must be specified");
   }
 
   const prevOnStart = global.nodeConfig.onStart;
@@ -76,10 +76,10 @@ if (args.crawl) {
             // Pre-define paths for internal storage
             const stopWordsPath = path.join(__dirname, "/data/stopwords.txt");
             const remote = {service: 'boogleService', method: 'index'};
-            distribution.crawl.comm.send([args.foldername, stopWordsPath], remote, (e, v) => {
+            distribution.crawl.comm.send([args.prefixname, stopWordsPath], remote, (e, v) => {
               console.log(e)
               console.log("COMPLETE INDEXING=========================");
-              local.distribution.crawl.status.stop();
+              distribution.crawl.status.stop();
             });
         });
       });
