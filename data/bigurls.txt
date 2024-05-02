@@ -50,7 +50,6 @@ https://aws.amazon.com/vi/?nc1=f_ls/
 https://docs.godotengine.org/en/stable/classes/class_object.html#signals/
 https://docs.godotengine.org/en/stable/classes/class_audioeffectbandpassfilter.html#description/
 https://www.javatpoint.com/using-range-in-cpp-switch-case/
-about:blank#tutorials/
 https://docs.godotengine.org/en/stable/classes/class_visualshadernodetransformfunc.html/
 https://www.geeksforgeeks.org/web-design/?ref=outindfooter/
 https://docs.godotengine.org/en/stable/classes/class_visibleonscreennotifier3d.html#property-descriptions/
@@ -14667,3 +14666,4 @@ https://docs.godotengine.org/en/stable/classes/class_scrollcontainer.html#descri
 https://www.freecodecamp.org/news/sql-temp-table-how-to-create-a-temporary-sql-table/
 https://javascript.info/manuals-specifications/
 https://docs.godotengine.org/en/stable/tutorials/scripting/resources.html#loading-scenes/
+

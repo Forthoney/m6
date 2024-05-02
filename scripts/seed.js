@@ -5,19 +5,42 @@ const distribution = require("../distribution");
 
 function map(_key, vUrl) {
   return new Promise((resolve, reject) => {
-    let data = "";
     const https = require("node:https");
-    https
-      .get(vUrl, (res) => {
-        const { statusCode } = res;
-        if (statusCode !== 200) {
-          res.resume();
-          return reject(Error(`Request Failed with Error code ${statusCode}`));
-        }
-        res.on("data", (chunk) => (data += chunk));
-        res.on("end", () => resolve({ [vUrl]: data }));
-      })
-      .on("error", (e) => reject(e));
+    let data = "";
+    const maxRedirects = 5;
+    let redirectCount = 0;
+
+    function makeReq(url) {
+      const req = https
+        .get(url, { timeout: 5000 }, (res) => {
+          const { statusCode, headers } = res;
+          if (statusCode >= 300 && statusCode < 400 && headers.location) {
+            if (redirectCount++ < maxRedirects) {
+              const redirect = new URL(headers.location, url);
+              redirect.protocol = "https:";
+              makeReq(redirect);
+            } else {
+              reject(Error("Max redirects exceeded"));
+            }
+          } else if (statusCode === 200) {
+            res.on("data", (chunk) => (data += chunk));
+            res.on("end", () => resolve({ [url]: data }));
+          } else {
+            res.resume();
+            return reject(
+              Error(`Request Failed with Error code ${statusCode}`),
+            );
+          }
+        })
+        .on("error", (e) => reject(e));
+      req.on("timeout", () => {
+        req.destroy();
+        console.log(`TIMEOUT on ${vUrl}`);
+        reject(Error("Timeout"));
+      });
+    }
+
+    makeReq(vUrl);
   });
 }
 
@@ -33,7 +56,7 @@ function doMapReduce(callback) {
 }
 
 const urlsRaw = fs.readFileSync(
-  path.join(__dirname, "..", "data", "urls.txt"),
+  path.join(__dirname, "..", "data", "bigurls.txt"),
   "utf8",
 );
 const urls = urlsRaw.split("\n").map((url, idx) => {

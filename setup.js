@@ -43,19 +43,10 @@ function initNodeConfig(args) {
     nodeConfig.onStart = () => {
       return new Promise((resolve, reject) => {
         prevOnStart();
-        const nodes = [
-          { ip: "127.0.0.1", port: 7070 },
-          { ip: "127.0.0.1", port: 7071 },
-          { ip: "127.0.0.1", port: 7072 },
-          { ip: "127.0.0.1", port: 7073 },
-          { ip: "127.0.0.1", port: 7074 },
-          { ip: "127.0.0.1", port: 7075 },
-          { ip: "127.0.0.1", port: 7076 },
-          { ip: "127.0.0.1", port: 7077 },
-          { ip: "127.0.0.1", port: 7078 },
-          { ip: "127.0.0.1", port: 7079 },
-          { ip: "127.0.0.1", port: 7080 },
-        ];
+        const nodes = [];
+        for (let i = 0; i < 50; i++) {
+          nodes.push({ ip: "127.0.0.1", port: 7070 + i });
+        }
         Promise.all(
           nodes.map((n) => global.distribution.local.status.spawnPromise(n)),
         )
