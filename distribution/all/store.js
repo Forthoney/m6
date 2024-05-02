@@ -145,7 +145,8 @@ function store(config) {
               method: "query",
               node: node
             };
-            local.comm.send([term, includeURLs, excludeURLs], remote, (e, result) => {
+            
+            local.comm.send([natural.PorterStemmer.stem(term), includeURLs, excludeURLs], remote, (e, result) => {
               if (e) {
                 reject(e);
               } else {
