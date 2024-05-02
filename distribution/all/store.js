@@ -9,6 +9,7 @@ const assert = require("node:assert");
 const { id, groupPromisify } = require("../util/util");
 const local = require("../local/local");
 const { promisify } = require("node:util");
+const natural = require('natural');
 
 /**
  * @param {object} config
