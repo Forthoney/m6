@@ -9,21 +9,11 @@ const mygroupGroup = {};
 
 let localServer = null;
 
-const n1 = {ip: '127.0.0.1', port: 8000};
+const n1 = {ip: '127.0.0.1', port: 8003};
 const n2 = {ip: '127.0.0.1', port: 8001};
 const n3 = {ip: '127.0.0.1', port: 8002};
 
 let remote = {service: 'status', method: 'stop'};
-
-remote.node = n1;
-distribution.local.comm.send([], remote, (e, v) => {
-remote.node = n2;
-distribution.local.comm.send([], remote, (e, v) => {
-    remote.node = n3;
-    distribution.local.comm.send([], remote, (e, v) => {
-    });
-});
-});
 
 mygroupGroup[id.getSID(n1)] = n1;
 mygroupGroup[id.getSID(n2)] = n2;

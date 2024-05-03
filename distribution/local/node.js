@@ -40,6 +40,7 @@ function start(callback) {
 
     // Write some code...
 
+    console.log("METHOD ", req.method);
     if (req.method !== "PUT") {
       res.end(serialization.serialize(new Error("Method not allowed!")));
       return;
@@ -96,7 +97,9 @@ function start(callback) {
 
       if (method == "allquery") {
         //name of group here
-        distribution.crawl.store.query(...jsBody, serviceCallback);
+        console.log("FUNC CALL ", method);
+        console.log(distribution.mygroup);
+        distribution.mygroup.store.query(...jsBody, serviceCallback);
         return;
       }
 
