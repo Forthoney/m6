@@ -1,31 +1,6 @@
-# M5: Distributed Execution Engine
-> Full name: Seong-Heon Jung
-> Email:  seong-heon_jung@brown.edu
-> Username:  sjung35
+## Usage
+### Frontend
+To deploy the frontend application, run npm install in the /app directory. Run `npm start` to start the frontend server. The application runs on port 3000, so visit http://localhost:3000 or the public IP address of a deployed server to access the GUI.
 
-## Summary
-> Summarize your implementation, including key challenges you encountered
-
-My implementation comprises 2 new software components, totaling 250 added lines of code over the previous implementation. Key challenges included `<1, 2, 3 + how you solved them>`.
-
-## Correctness & Performance Characterization
-> Describe how you characterized the correctness and performance of your implementation
-
-*Correctness*:
-In addition to the end-to-end mapreduce tests, I used asserts generously throughout
-my code to ensure that each intermediate state does not violate any invariants or expectations.
-Furthermore, I used JSDoc to document my code, thus providing soft type saftey guarantees.
-
-*Performance*:
-
-## Key Feature
-> Which extra features did you implement and how?
-I implemented distributed persistence. When the map workers finish computation, it pools the produced results.
-These results are then immediately placed on the nodes which will run the reduce computation via `store:put`.
-The supervisor/coordinator does not access the intermediate results of the computation, which reduces the load on the supervisor.
-
-## Time to Complete
-> Roughly, how many hours did this milestone take you to complete?
-
-Hours: 20
-
+### Framework
+To run the Boogle framework, clone the repository. Run `./distribution.js` from the root of the repository. By default, this will create a process that listens on 127.0.0.1:8080. This can be modified by setting the `--ip` and `--port` option. To launch multiple processes locally, use the `--local [NUMBER]` to launch NUMBER processes. There exists a `--aws` flag, but this is currently hardcoded to point to our AWS EC2 instances' public IP address, so user intervention is necessary before using this flag. The crawl and index workflows can be triggered with the `--crawl` and `--index` flag respectively.
