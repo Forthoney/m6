@@ -36,7 +36,6 @@ if (args.crawl) {
 
       const crawlConfig = { gid: "crawl" };
       const { seed } = require("./scripts/seed.js");
-      const { getURLs } = require("./scripts/getURLs.js");
       const group = require("./distribution/all/groups.js")(crawlConfig);
       group.put(crawlConfig, crawlGroup, (e, v) => {
         seed(args.filename, () => {
