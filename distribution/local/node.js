@@ -3,6 +3,7 @@ const url = require("url");
 
 let local = require("../local/local");
 const serialization = require("../util/serialization");
+const { promisify } = require("util");
 
 /*
     The start function will be called to start your node.
@@ -23,9 +24,19 @@ function isValidBody(body) {
   }
 }
 
-const start = function (onStart) {
+function start(callback) {
+  // const interval = setInterval(() => {
+  //   console.log(global.nodeConfig.port + " alive");
+  // }, 5000);
+  const nodeConfig = global.nodeConfig;
   const server = http.createServer((req, res) => {
     /* Your server will be listening for PUT requests. */
+
+    res.writeHead(200, {
+      'Access-Control-Allow-Origin': '*', 
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS', 
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization', 
+    });
 
     // Write some code...
 
@@ -43,9 +54,6 @@ const start = function (onStart) {
 
     const pathname = url.parse(req.url).pathname;
     const [, service, method] = pathname.split("/");
-
-    console.log(`[SERVER] (${global.nodeConfig.ip}:${global.nodeConfig.port})
-        Request: ${service}:${method}`);
 
     /*
 
@@ -75,9 +83,6 @@ const start = function (onStart) {
 
       const error = isValidBody(stringBody);
       if (error) {
-        console.log("============================================", error);
-        console.error(stringBody);
-        console.log("============================================", error);
         res.end(serialization.serialize([error, null]));
         return;
       }
@@ -89,6 +94,12 @@ const start = function (onStart) {
         res.end(serialization.serialize([e, v]));
       };
 
+      if (method == "allquery") {
+        //name of group here
+        distribution.crawl.store.query(...jsBody, serviceCallback);
+        return;
+      }
+
       local.routes.get(service, (error, ser) => {
         if (error) {
           res.end(serialization.serialize([error, null]));
@@ -96,8 +107,12 @@ const start = function (onStart) {
           return;
         }
 
-        console.log(`[SERVER] ${service}:${method} Args: ${JSON.stringify(jsBody)} 
-            ServiceCallback: ${serviceCallback}`);
+        // console.log(
+        //   `[SERVER] (${nodeConfig.ip}:${nodeConfig.port})\n`,
+        //   `Request: ${service}:${method}\n`,
+        //   // Takes too long to print on long bodies
+        //   // `Args: ${JSON.stringify(jsBody)} ServiceCallback: ${serviceCallback}`,
+        // );
 
         if (method in ser) {
           ser[method](...jsBody, serviceCallback);
@@ -122,14 +137,15 @@ const start = function (onStart) {
     remotely through the service interface.
   */
 
-  server.listen(global.nodeConfig.port, global.nodeConfig.ip, () => {
+  server.listen(nodeConfig.port, nodeConfig.ip, () => {
     console.log(
-      `Server running at http://${global.nodeConfig.ip}:${global.nodeConfig.port}/`,
+      `Server running at http://${nodeConfig.ip}:${nodeConfig.port}/`,
     );
-    onStart(server);
+    if (process.send !== undefined) {
+      process.send("spawned node running");
+    }
+    callback(server);
   });
-};
+}
 
-module.exports = {
-  start: start,
-};
+module.exports = { start };

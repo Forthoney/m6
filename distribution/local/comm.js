@@ -13,6 +13,28 @@ const serialization = require("../util/serialization");
  * @property {NodeInfo} node
  */
 
+function sendInner(options, serialized, message, remote, callback) {
+  const req = http.request(options, (res) => {
+    let body = "";
+    res.on("data", (chunk) => {
+      body += chunk;
+    });
+    res.on("end", () => {
+      const [err, content] = serialization.deserialize(body);
+      return callback(err, content);
+    });
+  });
+
+  req.on("error", (e) => {
+    const err = `${e.message}: sending ${message} to ${remote.node.ip}:${remote.node.port}`;
+    console.log(err);
+    return callback(Error(err));
+  });
+
+  req.write(serialized);
+  req.end();
+}
+
 /**
  * @param {Array} message
  * @param {LocalRemote} remote
@@ -20,7 +42,16 @@ const serialization = require("../util/serialization");
  * @return {void}
  */
 function send(message, remote, callback = () => {}) {
-  const msg = serialization.serialize(message);
+  if (
+    remote.node.ip === global.nodeConfig.ip &&
+    remote.node.port === global.nodeConfig.port
+  ) {
+    const local = global.distribution.local;
+    if (remote.service in local && remote.method in local[remote.service]) {
+      return local[remote.service][remote.method](...message, callback);
+    }
+  }
+
   const options = {
     hostname: remote.node.ip,
     port: remote.node.port,
@@ -30,26 +61,20 @@ function send(message, remote, callback = () => {}) {
       "content-type": "application/json",
     },
   };
-  const req = http.request(options, (res) => {
-    let body = "";
-    res.on("data", (chunk) => {
-      body += chunk;
-    });
-    res.on("end", () => {
-      if (body == "") {
-        console.error(msg);
+  const serialized = serialization.serialize(message);
+
+  let retryCount = 0;
+  const sendInnerRec = (e, content) => {
+    if (e) {
+      if (retryCount++ < 5) {
+        return sendInner(options, serialized, message, remote, sendInnerRec);
+      } else {
+        return callback(e);
       }
-      const [err, content] = serialization.deserialize(body);
-      callback(err, content);
-    });
-  });
-
-  req.on("error", (e) => {
-    callback(new Error(`Error on Request: ${e.message}`), null);
-  });
-
-  req.write(msg);
-  req.end();
+    }
+    return callback(null, content);
+  };
+  sendInner(options, serialized, message, remote, sendInnerRec);
 }
 
 module.exports = { send, sendPromise: promisify(send) };

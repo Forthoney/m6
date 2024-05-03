@@ -110,9 +110,6 @@ function serializeInner(object, mapping) {
     return "null";
   }
 
-  if (object instanceof Buffer) {
-    console.error(object);
-  }
   switch (typeof object) {
     case "number":
     case "boolean":
@@ -192,7 +189,7 @@ function parseWrapper(item) {
     case "undefined":
       return undefined;
     case "function":
-      return new Function(`return ${item.value}`)();
+      return new Function("require", `return ${item.value}`)(require);
     case "builtin":
       return GLOBAL_INDEX.getFromId(JSON.parse(item.value));
     case "Date":
@@ -271,22 +268,25 @@ function deserialize(string) {
   // flag if any keyword replacement occurred
   let removeUnderscore = false;
 
-  if (string == "") {
-    console.error("EMPTY STRING=================================");
+  try {
+    const parsed = JSON.parse(string, (key, item) => {
+      removeUnderscore =
+        removeUnderscore || key.match(/(^_+type$)|(^_+value$)|(^_+objectId$)/g);
+      return item instanceof Object && "type" in item
+        ? parseWrapper(item)
+        : item;
+    });
+    const objectIdMap = new Map();
+    if (parsed instanceof Object) {
+      createObjectIdMap(parsed, objectIdMap);
+      replaceReferences(parsed, objectIdMap);
+    }
+    // if removeUnderscore flag was not set, recursive traversal to replace keys
+    // is skipped
+    return removeUnderscore ? removeLeadingUnderscore(parsed) : parsed;
+  } catch (e) {
+    console.error(string, e);
   }
-  const parsed = JSON.parse(string, (key, item) => {
-    removeUnderscore =
-      removeUnderscore || key.match(/(^_+type$)|(^_+value$)|(^_+objectId$)/g);
-    return item instanceof Object && "type" in item ? parseWrapper(item) : item;
-  });
-  const objectIdMap = new Map();
-  if (parsed instanceof Object) {
-    createObjectIdMap(parsed, objectIdMap);
-    replaceReferences(parsed, objectIdMap);
-  }
-  // if removeUnderscore flag was not set, recursive traversal to replace keys
-  // is skipped
-  return removeUnderscore ? removeLeadingUnderscore(parsed) : parsed;
 }
 
 module.exports = {

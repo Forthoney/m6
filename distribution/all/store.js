@@ -6,9 +6,10 @@
 /** @typedef {import("../local/store").GroupKey} GroupKey} */
 
 const assert = require("node:assert");
+const { promisify } = require("node:util");
+const path = require("node:path");
 const { id, groupPromisify } = require("../util/util");
 const local = require("../local/local");
-const { promisify } = require("node:util");
 const natural = require('natural');
 
 /**
@@ -46,6 +47,37 @@ function store(config) {
     const result = nidToNodeMap.get(destinationNID);
     assert(result);
     return result;
+  }
+
+  function getSubgroup(key, subgroup, callback = () => {}) {
+    const query = { key: key, gid: path.join(context.gid, subgroup) };
+    if (key === null) {
+      distService.comm.send(
+        [query],
+        { service: "store", method: "get" },
+        (e, v) => {
+          if (Object.values(e).length !== 0) return callback(e, {});
+
+          const found = Object.values(v).flat();
+          callback(e, found);
+        },
+      );
+    } else {
+      local.groups.get(context.gid, (e, group) => {
+        if (e) {
+          return callback(e, {});
+        }
+
+        assert(group);
+        const destination = groupToDestinationNode(group, key);
+        const remote = {
+          service: "store",
+          method: "get",
+          node: destination,
+        };
+        local.comm.send([query], remote, callback);
+      });
+    }
   }
 
   /**
@@ -308,16 +340,28 @@ function store(config) {
     }
   };
 
+  getSubgroup[promisify.custom] = (key, subgroup) => {
+    if (key === null) {
+      return groupPromisify(getSubgroup)(key, subgroup);
+    } else {
+      return new Promise((resolve, reject) => {
+        getSubgroup(key, subgroup, (e, v) => (e ? reject(e) : resolve(v)));
+      });
+    }
+  };
+
   delGroup[promisify.custom] = groupPromisify(delGroup);
 
   return {
     get,
+    getSubgroup,
     put,
     del,
     query,
     delGroup,
     reconf,
     getPromise: promisify(get),
+    getSubgroupPromise: promisify(getSubgroup),
     delGroupPromise: promisify(delGroup),
   };
 }

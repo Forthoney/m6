@@ -4,6 +4,7 @@ const fs = require("node:fs");
 const assert = require("node:assert");
 const path = require("node:path");
 const util = require("../util/util");
+const { promisify } = require("node:util");
 
 /** @typedef {import("../types").Callback} Callback */
 
@@ -21,6 +22,13 @@ fs.mkdirSync(storeDirpath, { recursive: true });
 /**
  * @typedef {Object} GroupKey
  * @property {string} gid
+ * @property {?LocalKey} key
+ */
+
+/**
+ * @typedef {Object} NestedGroupKey
+ * @property {string} gid
+ * @property {?string} folder
  * @property {?LocalKey} key
  */
 
@@ -63,13 +71,16 @@ function resolveFilePath(key, val, callback) {
  * @return {void}
  */
 function readDir(path, callback) {
-  fs.readdir(path, (err, files) => {
+  fs.readdir(path, { withFileTypes: true }, (err, files) => {
     if (err) {
       const wrappedErr = Error(err.message);
       wrappedErr["code"] = err.code;
       return callback(wrappedErr);
     } else {
-      callback(null, files);
+      const filenames = files
+        .filter((item) => item.isFile())
+        .map((item) => item.name);
+      callback(null, filenames);
     }
   });
 }
@@ -88,7 +99,7 @@ function readFile(path, callback) {
 }
 
 /**
- * @param {?LocalKey | GroupKey} key
+ * @param {?LocalKey | ?NestedGroupKey | ?GroupKey} key
  * @param {Callback} callback
  * @return {void}
  */
@@ -107,7 +118,34 @@ function get(key, callback = () => {}) {
         }
       });
     } else {
-      return readFile(path.join(storeDirpath, key.gid, key.key), callback);
+      const nestedKey = key.key;
+      if (nestedKey["folder"] != null) {
+        // Nested lookup
+        if (nestedKey["key"] == null) {
+          if (
+            fs.existsSync(path.join(storeDirpath, key.gid, nestedKey["folder"]))
+          ) {
+            return readDir(
+              path.join(storeDirpath, key.gid, nestedKey["folder"]),
+              callback,
+            );
+          } else {
+            return callback(null, []);
+          }
+        } else {
+          return readFile(
+            path.join(
+              storeDirpath,
+              key.gid,
+              nestedKey["folder"],
+              nestedKey["key"],
+            ),
+            callback,
+          );
+        }
+      } else {
+        return readFile(path.join(storeDirpath, key.gid, key.key), callback);
+      }
     }
   }
 }
@@ -257,4 +295,15 @@ function del(key, callback = () => {}) {
   });
 }
 
-module.exports = { get, getAll, put, del, query, delGroup };
+module.exports = {
+  get,
+  getAll,
+  put,
+  del,
+  delGroup,
+  getPromise: promisify(get),
+  getAllPromise: promisify(getAll),
+  putPromise: promisify(put),
+  resolveFilePath,
+  query
+};

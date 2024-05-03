@@ -14,7 +14,7 @@ function get(service, callback = () => {}) {
   if (services.has(service)) {
     return callback(null, services.get(service));
   } else if (global.rpcLocal.has(service)) {
-    return callback(null, {call: global.rpcLocal.get(service)});
+    return callback(null, { call: global.rpcLocal.get(service) });
   } else {
     return callback(Error(`Route ${service} not found in services`), null);
   }
@@ -31,15 +31,15 @@ function put(service, route, callback = () => {}) {
   return callback(null, services.get(route));
 }
 
-const routes = {get, put};
+const routes = { get, put };
 
-services.set('status', require('./status'));
-services.set('groups', require('./groups'));
-services.set('comm', require('./comm'));
-services.set('gossip', require('./gossip'));
-services.set('mem', require('./mem'));
-services.set('store', require('./store'));
-services.set('mr', require('./mr'));
-services.set('routes', routes);
+services.set("status", require("./status"));
+services.set("groups", require("./groups"));
+services.set("comm", require("./comm"));
+services.set("gossip", require("./gossip"));
+services.set("mem", require("./mem"));
+services.set("store", require("./store"));
+services.set("mr", require("./mr"));
+services.set("routes", routes);
 
 module.exports = routes;

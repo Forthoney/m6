@@ -5,8 +5,9 @@
 
 const assert = require("node:assert");
 const local = require("../local/local");
-const { toAsync, createRPC } = require("../util/wire");
-const id = require("../util/id");
+const util = require("../util/util");
+const { toAsync, createRPC } = util.wire;
+const id = util.id;
 
 /**
  * @param {object} config
@@ -25,48 +26,51 @@ function mr(config) {
    * trigger the reduce phase
    * @param {MRJobMetadata} jobData
    * @param {number} numNotify
-   * @param {Reducer} reducer
+   * @param {object} setting
    * @param {Callback} callback
    * @return {void}
    */
-  function setupNotifyEndpoint(jobData, numNotify, reducer, callback) {
+  function setupNotifyEndpoint(jobData, numNotify, setting, callback) {
+    const { reduce } = setting;
+    const { jobID } = jobData;
     let completed = 0;
     const errors = [];
     const notify = (err) => {
+      console.log("COMPLETED", completed + 1);
       if (err) {
         errors.push(err);
       }
 
       if (++completed == numNotify) {
+        if (errors.length > 0) {
+          return callback(errors);
+        }
+
+        console.log("notified");
+        if (!reduce) {
+          return callback(errors, "Finished");
+        }
+
         distService.comm
-          .sendPromise([jobData, reducer], {
+          .sendPromise([jobData, reduce], {
             service: "mr",
             method: "reduce",
           })
           .then((results) => {
-            const keys = Object.values(results);
-            const promises = keys.map((storeID) =>
-              distService.store.getPromise(storeID),
-            );
-
-            Promise.all(promises)
-              .then((vals) => {
-                const mergeResults = vals
-                  .flat()
-                  .filter((v) => Object.keys(v).length > 0);
-
-                console.error(mergeResults);
-                distService.store
-                  .delGroupPromise(jobData.jobID)
-                  .then(() => callback({}, mergeResults))
-                  .catch((e) => callback(e));
-              })
-              .catch((e) => callback(e));
+            const promises = Object.values(results)
+              .filter((key) => key !== null)
+              .map((key) =>
+                distService.store.getSubgroupPromise(key, `reduce-${jobID}`),
+              );
+            return Promise.all(promises);
+          })
+          .then((vals) => {
+            callback({}, Object.assign({}, ...vals.flat()));
           })
           .catch((e) => callback(e));
       }
     };
-    createRPC(toAsync(notify), `mr-${jobData.jobID}`);
+    createRPC(toAsync(notify), `notify-${jobData.jobID}`);
     return;
   }
 
@@ -76,9 +80,6 @@ function mr(config) {
    * @return {void}
    */
   function exec(setting, callback = () => {}) {
-    if (setting.map == null || setting.reduce == null) {
-      return callback(Error("Did not supply mapper or reducer"), null);
-    }
     local.groups
       .getPromise(context.gid)
       .then((group) => {
@@ -90,9 +91,9 @@ function mr(config) {
           supervisor: global.nodeConfig,
           jobID: jobID,
         };
-        setupNotifyEndpoint(jobData, nodes.length, setting.reduce, callback);
+        setupNotifyEndpoint(jobData, nodes.length, setting, callback);
 
-        distService.comm.send([jobData, setting.map], {
+        distService.comm.send([jobData, setting], {
           service: "mr",
           method: "map",
         });

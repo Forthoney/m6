@@ -1,3 +1,4 @@
+const { promisify } = require("node:util");
 const local = require("../local/local");
 
 function status(config) {
@@ -52,7 +53,7 @@ function status(config) {
     });
   }
 
-  return { get, stop, spawn };
+  return { get, stop, spawn, spawnPromise: promisify(spawn) };
 }
 
 module.exports = status;
