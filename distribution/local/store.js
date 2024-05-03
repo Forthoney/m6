@@ -151,6 +151,50 @@ function get(key, callback = () => {}) {
 }
 
 /**
+ * Searches for URLs associated with the provided query term from the index.json file, 
+ * applying filters based on include and exclude URL lists.
+ * @param {string} searchTerm - The query term to search for in the index.
+ * @param {string[]} includeURLs - Array of URLs to include in the results.
+ * @param {string[]} excludeURLs - Array of URLs to exclude from the results.
+ * @param {Callback} callback - The callback function to return the results or errors.
+ * @return {void}
+ */
+function query(searchTerm, includeURLs, excludeURLs, callback = () => {}) {
+  const indexPath = path.join(__dirname, "../..", 'test', 'index.json');
+
+  fs.readFile(indexPath, 'utf8', (err, data) => {
+    if (err) {
+      return callback(Error("Failed to read index file: " + err.message));
+    }
+
+    let index;
+    try {
+      index = JSON.parse(data);
+    } catch (parseError) {
+      return callback(Error("Failed to parse index file: " + parseError.message));
+    }
+
+    const results = index[searchTerm];
+    if (!results) {
+      return callback(null, []);  // Return null if no term matches.
+    }
+
+    // First apply the include filter
+    let filteredResults = results;
+    if (includeURLs.length > 0) {
+      filteredResults = filteredResults.filter(item => includeURLs.includes(item.url));
+    }
+
+    // Then apply the exclude filter
+    if (excludeURLs.length > 0) {
+      filteredResults = filteredResults.filter(item => !excludeURLs.includes(item.url));
+    }
+
+    callback(null, filteredResults);
+  });
+}
+
+/**
  * @callback GetAllCallback
  * @param {?Error} err
  * @param {Array | undefined} [values=undefined]
@@ -260,5 +304,6 @@ module.exports = {
   getPromise: promisify(get),
   getAllPromise: promisify(getAll),
   putPromise: promisify(put),
-  resolveFilePath
+  resolveFilePath,
+  query
 };
