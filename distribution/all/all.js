@@ -6,7 +6,7 @@ routes    A mapping from names to functions      put
 status    Information about the current group    get, stop, spawn
 gossip    Status and information dissemination   send, at, del
 mem       An ephemeral (in-memory) store         get, put, del, reconf
-store     A persistent store                     get, put, del, reconf
+store     A persistent store                     get, put, del, reconf, query
 mr        A map-reduce implementation            exec
 */
 
