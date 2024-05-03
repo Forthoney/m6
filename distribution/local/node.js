@@ -32,6 +32,12 @@ function start(callback) {
   const server = http.createServer((req, res) => {
     /* Your server will be listening for PUT requests. */
 
+    res.writeHead(200, {
+      'Access-Control-Allow-Origin': '*', 
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS', 
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization', 
+    });
+
     // Write some code...
 
     if (req.method !== "PUT") {
@@ -87,6 +93,12 @@ function start(callback) {
       const serviceCallback = (e, v) => {
         res.end(serialization.serialize([e, v]));
       };
+
+      if (method == "allquery") {
+        //name of group here
+        distribution.crawl.store.query(...jsBody, serviceCallback);
+        return;
+      }
 
       local.routes.get(service, (error, ser) => {
         if (error) {
