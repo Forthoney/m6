@@ -98,7 +98,6 @@ function start(callback) {
       if (method == "allquery") {
         //name of group here
         console.log("FUNC CALL ", method);
-        console.log(distribution.mygroup);
         distribution.mygroup.store.query(...jsBody, serviceCallback);
         return;
       }

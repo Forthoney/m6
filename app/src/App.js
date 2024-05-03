@@ -38,7 +38,7 @@ function App() {
           headers: {
             "Content-Type": "application/json"
           },
-          body: JSON.stringify([query, [], [], numResults])
+          body: JSON.stringify([query.split(" "), [], [], numResults])
         };
 
         const res = await fetch(nodeURL, options);
